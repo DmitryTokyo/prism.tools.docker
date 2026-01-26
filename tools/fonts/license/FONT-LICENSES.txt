@@ -1,0 +1,22 @@
+
+FIGlet Fonts
+============
+
+The following FIGlet fonts are used in Prism.Tools:
+
+- Standard, Slant, Small, Big, Block
+  Created by Glenn Chappell and other FIGlet contributors
+  Modified by Paul Burton and others
+  License: Freely distributable and modifiable with attribution
+  
+- 3D, Banner, Doom, Delta Corps Priest 1
+  Part of the FIGlet font collection
+  License: Freely distributable and modifiable with attribution
+
+These fonts are from the standard FIGlet distribution and carry permissive
+licenses that allow free use, modification, and distribution as long as
+the original authors are credited.
+
+Source: http://www.figlet.org/
+
+
