@@ -5,7 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ASCII Art Generator - Prism.Tools</title>
-  <link rel="canonical" href="https://blgardner.github.io/prism.tools/tools/ascii-art-generator.html">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -243,6 +242,10 @@
     .btn-small:hover {
       background: rgba(80, 250, 123, 0.2);
     }
+    .btn-small:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     .output-content {
       padding: 1rem;
       background: #0a0a0f;
@@ -287,7 +290,41 @@
       color: #a1a1aa;
       line-height: 1.5;
     }
+    .animation-controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .btn-animate {
+      padding: 0.5rem 1rem;
+      background: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex: 1;
+    }
+    .btn-animate:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+    .btn-animate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .loading {
+      opacity: 0.6;
+    }
+    .font-status {
+      font-size: 0.75rem;
+      color: #a1a1aa;
+      margin-top: 0.25rem;
+    }
   </style>
+  
+  <script src="../lib/figlet-1.7.0.js"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -299,7 +336,7 @@
   <div class="container">
     <div class="header">
       <h1>🎨 ASCII Art Generator</h1>
-      <p>Convert images and text to ASCII art</p>
+      <p>Convert images and text to ASCII art - Powered by Figlet.js (MIT License)</p>
     </div>
 
     <div class="tabs">
@@ -323,7 +360,7 @@
           <label class="control-label">Character Set</label>
           <select id="img-charset">
             <option value="standard">Standard: @%#*+=-:. </option>
-            <option value="detailed">Detailed: $@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,"^`'. </option>
+            <option value="detailed">Detailed:  .:-i|_?7EGTK9%QWBM@ </option>
             <option value="blocks">Blocks: █▓▒░ </option>
             <option value="simple">Simple: #*. </option>
           </select>
@@ -349,15 +386,24 @@
         <div class="control-group">
           <label class="control-label">Font Style</label>
           <select id="text-font">
-            <option value="standard">Standard</option>
-            <option value="banner">Banner</option>
-            <option value="small">Small</option>
-            <option value="block">Block</option>
-            <option value="slant">Slant</option>
+            <option value="Standard">Standard</option>
+            <option value="Banner">Banner</option>
+            <option value="Small">Small</option>
+            <option value="Block">Block</option>
+            <option value="Slant">Slant</option>
+            <option value="Doom">Doom</option>
+            <option value="Big">Big</option>
+            <option value="3D">3D</option>
+            <option value="Delta Corps Priest 1">Delta Corps Priest 1</option>
           </select>
+          <div class="font-status" id="font-status">Fonts loading...</div>
         </div>
         <div class="control-group">
           <button class="btn" onclick="generateFromText()">Generate ASCII</button>
+        </div>
+        <div class="animation-controls">
+          <button class="btn-animate" id="animate-btn" onclick="toggleAnimation()" disabled>🎬 Animate</button>
+          <button class="btn-animate" onclick="stopAnimation()" disabled>⏹️ Stop</button>
         </div>
       </div>
     </div>
@@ -366,7 +412,7 @@
       <div class="output-header">
         <span class="output-title">ASCII Output</span>
         <div class="output-actions">
-          <button class="btn-small" onclick="copyAscii()">📋 Copy</button>
+          <button class="btn-small" onclick="copyAscii(event)">📋 Copy</button>
           <button class="btn-small" onclick="downloadAscii()">💾 Download</button>
         </div>
       </div>
@@ -376,7 +422,7 @@
     </div>
 
     <div class="info-box">
-      <strong>💡 Tips:</strong> For best results with images, use high-contrast photos with clear subjects. Smaller width values create more abstract art, while larger values preserve more detail. Text mode works best with short words or initials.
+      <strong>💡 Tips:</strong> For best results with images, use high-contrast photos with clear subjects. Smaller width values create more abstract art, while larger values preserve more detail. Text mode uses Figlet.js for professional ASCII fonts. Try the Animate button for dynamic effects!
     </div>
   </div>
 
@@ -384,54 +430,29 @@
 
   <script>
     let currentMode = 'image';
+    let animationInterval = null;
+    let isAnimating = false;
+    let currentText = '';
+    let animationFonts = ['Banner', 'Slant', 'Block', 'Doom', 'Standard', 'Big', '3D', 'Delta Corps Priest 1', 'Small'];
 
     const charsets = {
       standard: '@%#*+=-:. ',
-      detailed: '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'. ',
+      detailed: ' .:-i|_?7EGTK9%QWBM@',
       blocks: '█▓▒░ ',
       simple: '#*. '
     };
 
-    const fonts = {
-      standard: {
-        'A': ['  A  ', ' A A ', 'AAAAA', 'A   A', 'A   A'],
-        'B': ['BBBB ', 'B   B', 'BBBB ', 'B   B', 'BBBB '],
-        'C': [' CCC ', 'C   C', 'C    ', 'C   C', ' CCC '],
-        'D': ['DDDD ', 'D   D', 'D   D', 'D   D', 'DDDD '],
-        'E': ['EEEEE', 'E    ', 'EEEE ', 'E    ', 'EEEEE'],
-        'F': ['FFFFF', 'F    ', 'FFFF ', 'F    ', 'F    '],
-        'G': [' GGG ', 'G    ', 'G  GG', 'G   G', ' GGG '],
-        'H': ['H   H', 'H   H', 'HHHHH', 'H   H', 'H   H'],
-        'I': ['IIIII', '  I  ', '  I  ', '  I  ', 'IIIII'],
-        'J': ['JJJJJ', '    J', '    J', 'J   J', ' JJJ '],
-        'K': ['K   K', 'K  K ', 'KKK  ', 'K  K ', 'K   K'],
-        'L': ['L    ', 'L    ', 'L    ', 'L    ', 'LLLLL'],
-        'M': ['M   M', 'MM MM', 'M M M', 'M   M', 'M   M'],
-        'N': ['N   N', 'NN  N', 'N N N', 'N  NN', 'N   N'],
-        'O': [' OOO ', 'O   O', 'O   O', 'O   O', ' OOO '],
-        'P': ['PPPP ', 'P   P', 'PPPP ', 'P    ', 'P    '],
-        'Q': [' QQQ ', 'Q   Q', 'Q   Q', 'Q  Q ', ' QQ Q'],
-        'R': ['RRRR ', 'R   R', 'RRRR ', 'R  R ', 'R   R'],
-        'S': [' SSS ', 'S    ', ' SSS ', '    S', 'SSSS '],
-        'T': ['TTTTT', '  T  ', '  T  ', '  T  ', '  T  '],
-        'U': ['U   U', 'U   U', 'U   U', 'U   U', ' UUU '],
-        'V': ['V   V', 'V   V', 'V   V', ' V V ', '  V  '],
-        'W': ['W   W', 'W   W', 'W W W', 'WW WW', 'W   W'],
-        'X': ['X   X', ' X X ', '  X  ', ' X X ', 'X   X'],
-        'Y': ['Y   Y', ' Y Y ', '  Y  ', '  Y  ', '  Y  '],
-        'Z': ['ZZZZZ', '   Z ', '  Z  ', ' Z   ', 'ZZZZZ'],
-        '0': [' 000 ', '0  00', '0 0 0', '00  0', ' 000 '],
-        '1': ['  1  ', ' 11  ', '  1  ', '  1  ', '11111'],
-        '2': [' 222 ', '2   2', '   2 ', '  2  ', '22222'],
-        '3': ['3333 ', '    3', ' 333 ', '    3', '3333 '],
-        '4': ['4   4', '4   4', '44444', '    4', '    4'],
-        '5': ['55555', '5    ', '5555 ', '    5', '5555 '],
-        '6': [' 666 ', '6    ', '6666 ', '6   6', ' 666 '],
-        '7': ['77777', '    7', '   7 ', '  7  ', ' 7   '],
-        '8': [' 888 ', '8   8', ' 888 ', '8   8', ' 888 '],
-        '9': [' 999 ', '9   9', ' 9999', '    9', ' 999 '],
-        ' ': ['     ', '     ', '     ', '     ', '     ']
-      }
+    // Font mapping for Figlet.js
+    const fontMapping = {
+      'Standard': 'Standard',
+      'Banner': 'Banner',
+      'Small': 'Small',
+      'Block': 'Block',
+      'Slant': 'Slant',
+      'Doom': 'Doom',
+      'Big': 'Big',
+      '3D': '3D',
+      'Delta Corps Priest 1': 'Delta Corps Priest 1'
     };
 
     function switchMode(mode) {
@@ -440,6 +461,22 @@
       document.getElementById(`tab-${mode}`).classList.add('active');
       document.querySelectorAll('.mode-section').forEach(s => s.classList.remove('active'));
       document.getElementById(`mode-${mode}`).classList.add('active');
+      
+      if (mode === 'text' && typeof figlet !== 'undefined') {
+        checkFonts();
+      }
+    }
+
+    // Check if Figlet is loaded and fonts are available
+    function checkFonts() {
+      if (typeof figlet === 'undefined') {
+        document.getElementById('font-status').textContent = 'Loading...';
+        document.getElementById('animate-btn').disabled = true;
+        return;
+      }
+
+      document.getElementById('font-status').textContent = 'Ready! Fonts: Standard, Banner, Small, Block, Slant, Doom, Big, 3D, Delta Corps Priest 1';
+      document.getElementById('animate-btn').disabled = false;
     }
 
     document.getElementById('file-input').addEventListener('change', (e) => {
@@ -458,21 +495,41 @@
     });
 
     function generateFromImage(img) {
-      if (!img && !window.lastImage) {
+      if (typeof img === 'undefined' && !window.lastImage) {
         alert('Please upload an image first');
         return;
       }
-      
+
       if (img) window.lastImage = img;
-      img = window.lastImage;
+      img = window.lastImage || img;
 
       const width = parseInt(document.getElementById('img-width').value);
       const charsetType = document.getElementById('img-charset').value;
-      const charset = charsets[charsetType];
+      let charset = charsets[charsetType].split('');
       const invert = document.getElementById('img-invert').checked;
 
+      // Sort charset by density for better detail
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
+      canvas.width = 10;
+      canvas.height = 10;
+      ctx.font = '10px monospace';
+      ctx.textBaseline = 'top';
+
+      const densities = charset.map(char => {
+        ctx.clearRect(0, 0, 10, 10);
+        ctx.fillStyle = 'black';
+        ctx.fillText(char, 0, 0);
+        const data = ctx.getImageData(0, 0, 10, 10).data;
+        let count = 0;
+        for (let j = 0; j < data.length; j += 4) {
+          if (data[j] < 255 || data[j+1] < 255 || data[j+2] < 255) count++;
+        }
+        return {char, density: count / 100};
+      });
+
+      densities.sort((a, b) => a.density - b.density);
+      charset = densities.map(d => d.char);
 
       const aspectRatio = img.height / img.width;
       const height = Math.floor(width * aspectRatio * 0.5);
@@ -491,10 +548,10 @@
           const g = imageData.data[i + 1];
           const b = imageData.data[i + 2];
           
-          const brightness = (r + g + b) / 3;
-          const charIndex = Math.floor((brightness / 255) * (charset.length - 1));
-          const char = invert ? charset[charset.length - 1 - charIndex] : charset[charIndex];
-          ascii += char;
+          const brightness = (r + g + b) / 3 / 255;
+          let charIndex = Math.floor(brightness * (charset.length - 1));
+          if (invert) charIndex = charset.length - 1 - charIndex;
+          ascii += charset[charIndex];
         }
         ascii += '\n';
       }
@@ -504,98 +561,91 @@
     }
 
     function generateFromText() {
-      const text = document.getElementById('text-input').value.toUpperCase();
       const fontType = document.getElementById('text-font').value;
-      
-      if (!text.trim()) {
+      const text = document.getElementById('text-input').value.trim();
+
+      if (!text) {
         alert('Please enter text');
         return;
       }
-    
-      if (fontType === 'standard') {
-        const font = fonts.standard;
-        let lines = ['', '', '', '', ''];
-        
-        for (let char of text) {
-          if (font[char]) {
-            for (let i = 0; i < 5; i++) {
-              lines[i] += font[char][i] + ' ';
-            }
-          } else {
-            // Handle unknown characters as spaces
-            for (let i = 0; i < 5; i++) {
-              lines[i] += '     ';
-            }
-          }
-        }
-        
-        document.getElementById('ascii-output').textContent = lines.join('\n');
-        
-      } else if (fontType === 'banner') {
-        let result = '';
-        for (let char of text) {
-          if (char === ' ') {
-            result += '\n\n\n\n\n\n\n';
-            continue;
-          }
-          // Top line
-          result += char.repeat(7) + '\n';
-          // Middle lines with sides
-          for (let i = 0; i < 4; i++) {
-            result += char + '     ' + char + '\n';
-          }
-          // Bottom line
-          result += char.repeat(7) + '\n\n';
-        }
-        document.getElementById('ascii-output').textContent = result;
-        
-      } else if (fontType === 'small') {
-        // Small just shows the text as-is but with some spacing
-        let result = '';
-        for (let char of text) {
-          result += char + ' ';
-        }
-        document.getElementById('ascii-output').textContent = result;
-        
-      } else if (fontType === 'block') {
-        let result = '';
-        for (let char of text) {
-          if (char === ' ') {
-            result += '\n\n\n\n';
-            continue;
-          }
-          result += '█████\n';
-          result += '█   █\n';
-          result += '█████\n\n';
-        }
-        document.getElementById('ascii-output').textContent = result;
-        
-      } else if (fontType === 'slant') {
-        const height = 5;
-        let lines = [];
-        
-        for (let i = 0; i < height; i++) {
-          let line = '';
-          for (let j = 0; j < text.length; j++) {
-            // Add increasing indentation for slant effect
-            const indent = ' '.repeat(height - i - 1);
-            if (i === 0) {
-              line += indent;
-            }
-            line += text[j] + ' ';
-          }
-          lines.push(line);
-        }
-        
-        document.getElementById('ascii-output').textContent = lines.join('\n');
+
+      if (typeof figlet === 'undefined') {
+        alert('Library is still loading. Please wait a moment and try again.');
+        return;
       }
+
+      const fontName = fontMapping[fontType] || 'Standard';
       
-      trackUsage();
+      // Show loading state
+      document.getElementById('ascii-output').classList.add('loading');
+      document.getElementById('ascii-output').textContent = 'Generating ASCII art...';
+
+      figlet.text(text, { 
+        font: fontName,
+        width: 80,
+        whitespace: false 
+      }, (err, ascii) => {
+        document.getElementById('ascii-output').classList.remove('loading');
+        if (err) {
+          console.error('Figlet error:', err);
+          document.getElementById('ascii-output').textContent = `Error loading font: ${fontName}\n\nFallback: ${text.toUpperCase()}`;
+        } else if (ascii) {
+          document.getElementById('ascii-output').textContent = ascii;
+          currentText = text;  // Store for animation
+        } else {
+          document.getElementById('ascii-output').textContent = 'No output generated.';
+        }
+        trackUsage();
+      });
     }
 
-    function copyAscii() {
+    function toggleAnimation() {
+      if (isAnimating) {
+        stopAnimation();
+      } else {
+        startAnimation();
+      }
+    }
+
+    function startAnimation() {
+      if (!currentText) {
+        alert('Generate static text first!');
+        return;
+      }
+
+      isAnimating = true;
+      document.getElementById('animate-btn').textContent = '⏸️ Pause';
+      document.getElementById('animate-btn').disabled = true;
+      document.getElementById('stop-btn').disabled = false;
+
+      let fontIndex = 0;
+      animationInterval = setInterval(() => {
+        const fontName = animationFonts[fontIndex % animationFonts.length];
+        figlet.text(currentText, { font: fontName }, (err, ascii) => {
+          if (!err && ascii) {
+            document.getElementById('ascii-output').textContent = ascii;
+          }
+        });
+        fontIndex++;
+      }, 800);  // 800ms per frame for smooth animation
+    }
+
+    function stopAnimation() {
+      isAnimating = false;
+      clearInterval(animationInterval);
+      animationInterval = null;
+      document.getElementById('animate-btn').textContent = '🎬 Animate';
+      document.getElementById('animate-btn').disabled = false;
+      document.getElementById('stop-btn').disabled = true;
+
+      // Regenerate the current static version
+      const fontType = document.getElementById('text-font').value;
+      generateFromText();  // This will use the current font setting
+    }
+
+    function copyAscii(event) {
       const ascii = document.getElementById('ascii-output').textContent;
-      if (ascii.includes('Upload')) {
+      if (ascii.includes('Upload') || ascii.includes('Generating') || ascii.includes('Error')) {
         alert('Generate ASCII art first');
         return;
       }
@@ -604,21 +654,26 @@
         const original = btn.textContent;
         btn.textContent = '✓ Copied!';
         setTimeout(() => { btn.textContent = original; }, 2000);
+      }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('Copy failed. Please select and copy manually.');
       });
     }
 
     function downloadAscii() {
       const ascii = document.getElementById('ascii-output').textContent;
-      if (ascii.includes('Upload')) {
+      if (ascii.includes('Upload') || ascii.includes('Generating') || ascii.includes('Error')) {
         alert('Generate ASCII art first');
         return;
       }
-      const blob = new Blob([ascii], { type: 'text/plain' });
+      const blob = new Blob([ascii], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'ascii-art.txt';
+      a.download = `ascii-art-${Date.now()}.txt`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 
@@ -628,18 +683,41 @@
       localStorage.setItem('prism-usage-count', count);
     }
 
-    // Auto-generate text on input
+    // Auto-generate text on input (debounced to avoid too many calls)
+    let textTimeout;
     document.getElementById('text-input').addEventListener('input', () => {
-      if (document.getElementById('text-input').value.trim()) {
+      clearTimeout(textTimeout);
+      textTimeout = setTimeout(() => {
+        if (document.getElementById('text-input').value.trim() && typeof figlet !== 'undefined') {
+          generateFromText();
+        }
+      }, 500);  // 500ms debounce
+    });
+
+    document.getElementById('text-font').addEventListener('change', () => {
+      if (document.getElementById('text-input').value.trim() && typeof figlet !== 'undefined') {
         generateFromText();
       }
     });
 
-    document.getElementById('text-font').addEventListener('change', () => {
-      if (document.getElementById('text-input').value.trim()) {
-        generateFromText();
-      }
+    // Check if Figlet loaded when page loads
+    window.addEventListener('load', () => {
+      checkFonts();
+      
+      // Button references for animation
+      const stopBtn = document.querySelector('.btn-animate:last-child');
+      stopBtn.id = 'stop-btn';
+      stopBtn.disabled = true;
     });
+
+    // Fallback if Figlet fails to load
+    if (typeof figlet === 'undefined') {
+      console.warn('Failed to load library. Text generation may not work.');
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('font-status').textContent = 'Library failed to load.';
+        document.getElementById('animate-btn').style.display = 'none';
+      });
+    }
   </script>
 </body>
 </html>

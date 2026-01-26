@@ -1,1169 +1,1150 @@
 <!DOCTYPE html>
 <!-- Copyright (c) 2025 BLGardner. All Rights Reserved. -->
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>SVG Editor - Prism.Tools</title>
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Editor - Prism.Tools</title>
+    <style>
+        :root { --bg: #0a0a0f; --panel: #18181b; --border: #27272a; --accent: #a78bfa; --text: #e4e4e7; --text-dim: #a1a1aa; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 12px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        
+    .navbar { background: rgba(10, 10, 15, 0.98); backdrop-filter: blur(12px); padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #27272a; position: sticky; top: 0; z-index: 100;}
+    .logo { font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, #50FA7B 0%, #8BE9FD 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+    .back-link { color: #a1a1aa; text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }
+    .back-link:hover { color: #e4e4e7; }
+	.donate-btn { padding: 0.4rem 1rem; background: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%); color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.875rem; transition: transform 0.2s; white-space: nowrap; }    
+    .donate-btn:hover { transform: translateY(-1px); }
+	.toolbar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 6px 12px; display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto; }
+        .tool-btn { height: 32px; min-width: 32px; background: #27272a; border: 1px solid #3f3f46; color: var(--text); border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: 0.1s; }
+        .tool-btn:hover { background: #3f3f46; border-color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
 
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                background: #0a0a0f;
-                color: #e4e4e7;
-                line-height: 1.4;
-                font-size: 14px;
-                min-height: 100vh;
-            }
+        .workspace { display: flex; flex: 1; overflow: hidden; }
+        .canvas-area { flex: 1; background: #050508; display: flex; align-items: center; justify-content: center; position: relative; overflow: auto; }
+        #canvas { background: #0a0a0f; box-shadow: 0 0 40px rgba(0,0,0,0.5); border: 1px solid var(--border); flex-shrink: 0; }
 
-            .navbar {
-                background: rgba(10, 10, 15, 0.98);
-                backdrop-filter: blur(12px);
-                padding: 0.75rem 1.5rem;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-bottom: 1px solid #27272a;
-                position: sticky;
-                top: 0;
-                z-index: 100;
-            }
+        .sidebar { width: 380px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+        .sidebar-header { padding: 8px 12px; background: #1f1f23; border-bottom: 1px solid var(--border); font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
+        .prop-group { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+        .prop-label { display: block; color: var(--text-dim); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; font-size: 9px; }
+        .prop-label-with-help { display: flex; align-items: center; gap: 4px; color: var(--text-dim); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; font-size: 9px; }
+        .help-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #3f3f46; color: var(--text); font-size: 10px; cursor: help; position: relative; }
+        .help-icon:hover::after { 
+            content: attr(data-tooltip); 
+            position: absolute; 
+            left: 20px; 
+            top: -5px; 
+            background: #27272a; 
+            border: 1px solid var(--border); 
+            color: var(--text); 
+            padding: 6px 8px; 
+            border-radius: 4px; 
+            font-size: 10px; 
+            white-space: nowrap; 
+            z-index: 1000; 
+            max-width: 200px; 
+            white-space: normal; 
+            width: max-content; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            word-wrap: break-word;
+        }
+        .prop-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+        input, select, textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px; border-radius: 4px; font-size: 11px; outline: none; }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+        textarea { height: 50px; font-family: monospace; resize: vertical; }
 
-            .logo {
-                font-size: 1.25rem;
-                font-weight: 700;
-                background: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                text-decoration: none;
-            }
+        .stop-item { background: #222226; border: 1px solid var(--border); padding: 6px 30px 6px 6px; border-radius: 4px; margin-bottom: 6px; position: relative; }
+        .del-btn { position: absolute; top: 4px; right: 4px; color: #ef4444; border: none; background: none; cursor: pointer; font-size: 14px; }
+        [selected] { outline: 2px dashed var(--accent) !important; outline-offset: 2px; }
+        .empty-state { padding: 30px; text-align: center; color: var(--text-dim); font-size: 11px; }
+        button { background: #27272a; border: 1px solid #3f3f46; color: var(--text); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-top: 6px; }
+        button:hover { background: #3f3f46; }
+        
+        .transform-controls { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+        .transform-btn { width: 32px; height: 24px; background: #3f3f46; border: 1px solid var(--border); border-radius: 2px; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+        .transform-btn:hover { background: #52525b; }
+        .transform-input { flex: 1; }
+        .transform-label { min-width: 60px; }
+        .lock-btn { width: 24px; height: 24px; background: #27272a; border: 1px solid var(--border); border-radius: 2px; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+        .lock-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+    <a href="../index.html" class="logo">PRISM.TOOLS</a>
+    <a href="https://www.paypal.com/paypalme/BLGApps" target="_blank" class="donate-btn">☕ Donate</a>
+    <a href="../index.html" class="back-link">← All Tools</a>
+  </nav>
 
-            .back-link {
-                color: #a1a1aa;
-                text-decoration: none;
-                font-size: 0.875rem;
-                transition: color 0.2s;
-            }
+    <div class="toolbar">
+        <button class="tool-btn" onclick="document.getElementById('svg-import').click()" title="Import SVG">📂</button>
+        <input type="file" id="svg-import" accept=".svg" style="display: none;">
+        <button class="tool-btn" onclick="toggleBackground()" title="Toggle Canvas Background">BG</button>
+        <div class="divider"></div>
+        <button class="tool-btn active" data-tool="select" title="Select">👆</button>
+        <button class="tool-btn" data-tool="rect" title="Rectangle">▭</button>
+        <button class="tool-btn" data-tool="ellipse" title="Ellipse (Shift=Circle)">◯</button>
+        <button class="tool-btn" data-tool="line" title="Line">─</button>
+        <button class="tool-btn" data-tool="polygon" title="Polygon (dblclick finish)">△</button>
+        <button class="tool-btn" data-tool="arc" title="Arc">◐</button>
+        <button class="tool-btn" onclick="toggleSelectAll()" title="Select/Deselect All">⛶</button>
+        <button class="tool-btn" data-tool="text" title="Text">T</button>
+        <div class="divider"></div>
+        <button class="tool-btn" onclick="groupSelection()" title="Group">🔗</button>
+        <button class="tool-btn" onclick="ungroupSelection()" title="Ungroup">⛓️‍💥</button>
+        <button class="tool-btn" onclick="deleteSelected()" title="Delete">🗑️</button>
+        <button class="tool-btn" onclick="fitToContent()" title="Fit to Content">✂️</button>
+        <div class="divider"></div>
+        <button class="tool-btn" onclick="undo()" title="Undo">↶</button>
+        <button class="tool-btn" onclick="redo()" title="Redo">↷</button>
+        <div class="divider"></div>
+        <button class="tool-btn" onclick="copyCode()" title="Copy Code">📋</button>
+        <button class="tool-btn" onclick="downloadSVG()" title="Download">💾</button>
+    </div>
 
-            .back-link:hover {
-                color: #e4e4e7;
-            }
+    <div class="workspace">
+        <div class="canvas-area" id="canvas-area">
+            <svg id="canvas" width="800" height="600" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="checker" patternUnits="userSpaceOnUse" width="20" height="20">
+                        <rect width="10" height="10" fill="#ffffff"/>
+                        <rect x="10" y="10" width="10" height="10" fill="#ffffff"/>
+                        <rect x="10" y="0" width="10" height="10" fill="#cccccc"/>
+                        <rect x="0" y="10" width="10" height="10" fill="#cccccc"/>
+                    </pattern>
+                    <linearGradient id="prismLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.98"/>
+                      <stop offset="100%" stop-color="#ECEFF3" stop-opacity="0.95"/>
+                    </linearGradient>
+                    <linearGradient id="prismRainbow" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%"   stop-color="#FF6B6B" stop-opacity="0.55"/>
+                      <stop offset="20%"  stop-color="#FFA500" stop-opacity="0.55"/>
+                      <stop offset="40%"  stop-color="#FFD93D" stop-opacity="0.55"/>
+                      <stop offset="60%"  stop-color="#6BCF7F" stop-opacity="0.55"/>
+                      <stop offset="80%"  stop-color="#4D96FF" stop-opacity="0.55"/>
+                      <stop offset="100%" stop-color="#4D96FF" stop-opacity="0.45"/>
+                    </linearGradient>
+                    <linearGradient id="beamRed" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#FF6B6B" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#FF6B6B" stop-opacity="0.35"/>
+                    </linearGradient>
+                    <linearGradient id="beamOrange" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#FFA500" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#FFA500" stop-opacity="0.35"/>
+                    </linearGradient>
+                    <linearGradient id="beamYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#FFD93D" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#FFD93D" stop-opacity="0.35"/>
+                    </linearGradient>
+                    <linearGradient id="beamGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#6BCF7F" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#6BCF7F" stop-opacity="0.35"/>
+                    </linearGradient>
+                    <linearGradient id="beamBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#4D96FF" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#4D96FF" stop-opacity="0.35"/>
+                    </linearGradient>
+                    <filter id="beamBloom" x="-10%" y="-10%" width="120%" height="120%">
+                      <feGaussianBlur stdDeviation="0.5"/>
+                    </filter>
+                    <linearGradient id="lightBeam" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#FFD93D" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+                    </linearGradient>
+                    <radialGradient id="lightGlow">
+                      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8"/>
+                      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+                    </radialGradient>
+                </defs>
 
-            .donate-btn {
-                padding: 0.4rem 1rem;
-                background: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%);
-                color: white;
-                border-radius: 6px;
-                text-decoration: none;
-                font-weight: 600;
-                font-size: 0.875rem;
-                transition: transform 0.2s;
-                white-space: nowrap;
-            }
+                <g filter="url(#beamBloom)">
+                    <polygon points="240,88 325,52 325,60 240,90" fill="url(#beamRed)"/>
+                    <polygon points="240,94 325,77 325,85 240,96" fill="url(#beamOrange)"/>
+                    <polygon points="240,100 325,102 325,110 240,102" fill="url(#beamYellow)"/>
+                    <polygon points="240,106 325,127 325,135 240,108" fill="url(#beamGreen)"/>
+                    <polygon points="240,112 325,152 325,160 240,114" fill="url(#beamBlue)"/>
+                </g>
 
-            .donate-btn:hover {
-                transform: translateY(-1px);
-            }
+                <polygon points="199,80 170,100 199,120" fill="url(#prismLeft)" stroke="#D1D5DB" stroke-width="1"/>
+                <polygon points="200,80 230,100 200,120" fill="url(#prismRainbow)" stroke="#B6BCC6" stroke-width="1"/>
+                <polygon points="100,96 190,80 190,120 100,104" fill="url(#lightBeam)"/>
 
-            .container {
-                max-width: 1600px;
-                margin: 0 auto;
-                padding: 1rem;
-            }
+                <g transform="translate(0,4)">
+                    <circle cx="80" cy="100" r="20" fill="url(#lightGlow)" opacity="0.3"/>
+                    <circle cx="80" cy="95" r="12" fill="none" stroke="#FFD93D" stroke-width="2.5"/>
+                    <text x="80" y="101" font-size="16" font-weight="700" fill="#FFD93D" text-anchor="middle">!</text>
+                    <rect x="73" y="111" width="14" height="2" rx="1" fill="#FFD93D"/>
+                    <rect x="73" y="115" width="14" height="2" rx="1" fill="#FFD93D"/>
+                    <rect x="75" y="119" width="10" height="2" rx="1" fill="#FFD93D"/>
+                </g>
 
-            .header {
-                text-align: center;
-                padding: 1.5rem 0 1rem;
-            }
+                <text x="160" y="175" font-size="24" font-weight="700" fill="#FF6B6B">P</text>
+                <text x="179" y="175" font-size="24" font-weight="700" fill="#FFA500">R</text>
+                <text x="200" y="175" font-size="24" font-weight="700" fill="#FFD93D">I</text>
+                <text x="214" y="175" font-size="24" font-weight="700" fill="#6BCF7F">S</text>
+                <text x="230" y="175" font-size="24" font-weight="700" fill="#4D96FF">M</text>
+                <text x="200" y="194" font-size="14" fill="#6C757D" font-weight="700" text-anchor="middle">.TOOLS</text>
 
-            .header h1 {
-                font-size: 1.75rem;
-                margin-bottom: 0.25rem;
-                color: #a78bfa;
-            }
-
-            .header p {
-                color: #a1a1aa;
-                font-size: 0.875rem;
-            }
-
-            .toolbar {
-                background: #18181b;
-                border: 1px solid #27272a;
-                border-radius: 8px;
-                padding: 0.75rem;
-                margin-bottom: 1rem;
-                display: flex;
-                gap: 0.75rem;
-                flex-wrap: wrap;
-                align-items: center;
-            }
-
-            .tool-group {
-                display: flex;
-                gap: 0.5rem;
-                align-items: center;
-            }
-
-            .tool-btn {
-                width: 40px;
-                height: 40px;
-                background: rgba(167, 139, 250, 0.1);
-                border: 1px solid rgba(167, 139, 250, 0.3);
-                color: #a78bfa;
-                border-radius: 6px;
-                font-size: 1.25rem;
-                cursor: pointer;
-                transition: all 0.2s;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .tool-btn:hover {
-                background: rgba(167, 139, 250, 0.2);
-                transform: translateY(-1px);
-            }
-
-            .tool-btn.active {
-                background: #a78bfa;
-                color: #0a0a0f;
-                border-color: #a78bfa;
-            }
-
-            .toolbar-divider {
-                width: 1px;
-                height: 40px;
-                background: #27272a;
-            }
-
-            .color-picker-group {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-            .color-picker-group label {
-                font-size: 0.8rem;
-                color: #a1a1aa;
-                font-weight: 600;
-            }
-
-            .color-picker-group input[type='color'] {
-                width: 40px;
-                height: 40px;
-                border: 1px solid #27272a;
-                border-radius: 6px;
-                cursor: pointer;
-                background: #0a0a0f;
-                padding: 2px;
-            }
-
-            .number-input-group {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-            .number-input-group label {
-                font-size: 0.8rem;
-                color: #a1a1aa;
-                font-weight: 600;
-            }
-
-            .number-input-group input {
-                width: 60px;
-                padding: 0.5rem;
-                background: #0a0a0f;
-                border: 1px solid #27272a;
-                border-radius: 6px;
-                color: #e4e4e7;
-                font-size: 0.85rem;
-            }
-
-            .btn-icon {
-                width: 40px;
-                height: 40px;
-                background: rgba(167, 139, 250, 0.1);
-                border: 1px solid rgba(167, 139, 250, 0.3);
-                color: #a78bfa;
-                border-radius: 6px;
-                font-size: 1rem;
-                cursor: pointer;
-                transition: all 0.2s;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: 600;
-            }
-
-            .btn-icon:hover {
-                background: rgba(167, 139, 250, 0.2);
-                transform: translateY(-1px);
-            }
-
-            .editor-layout {
-                display: grid;
-                grid-template-columns: 1fr 320px;
-                gap: 1rem;
-                margin-bottom: 1rem;
-            }
-
-            .canvas-panel {
-                background: #18181b;
-                border: 1px solid #27272a;
-                border-radius: 8px;
-                overflow: hidden;
-            }
-
-            .canvas-header {
-                background: #1f1f23;
-                padding: 0.75rem 0.875rem;
-                border-bottom: 1px solid #27272a;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .canvas-title {
-                font-size: 0.85rem;
-                font-weight: 600;
-                color: #a78bfa;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-
-            .canvas-controls {
-                display: flex;
-                gap: 0.5rem;
-            }
-
-            .btn-small {
-                padding: 0.25rem 0.625rem;
-                background: rgba(167, 139, 250, 0.1);
-                border: 1px solid rgba(167, 139, 250, 0.3);
-                color: #a78bfa;
-                border-radius: 4px;
-                font-size: 0.75rem;
-                cursor: pointer;
-                transition: all 0.2s;
-                font-weight: 600;
-            }
-
-            .btn-small:hover {
-                background: rgba(167, 139, 250, 0.2);
-            }
-
-            .canvas-container {
-                padding: 1rem;
-                background: #0a0a0f;
-                overflow: auto;
-                max-height: 600px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            #canvas {
-                border: 1px solid #27272a;
-                cursor: crosshair;
-                display: block;
-            }
-
-            .properties-panel {
-                background: #18181b;
-                border: 1px solid #27272a;
-                border-radius: 8px;
-                overflow: hidden;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .panel-header {
-                background: #1f1f23;
-                padding: 0.75rem 0.875rem;
-                border-bottom: 1px solid #27272a;
-                font-size: 0.85rem;
-                font-weight: 600;
-                color: #a78bfa;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-
-            .panel-content {
-                padding: 1rem;
-                flex: 1;
-                overflow-y: auto;
-                max-height: 550px;
-            }
-
-            .property-empty {
-                text-align: center;
-                color: #71717a;
-                font-size: 0.85rem;
-                padding: 2rem 1rem;
-            }
-
-            .property-group {
-                margin-bottom: 0.875rem;
-            }
-
-            .property-label {
-                display: block;
-                font-size: 0.75rem;
-                font-weight: 600;
-                color: #a1a1aa;
-                margin-bottom: 0.5rem;
-                text-transform: uppercase;
-                letter-spacing: 0.3px;
-            }
-
-            .property-input {
-                width: 100%;
-                padding: 0.5rem 0.75rem;
-                background: #0a0a0f;
-                border: 1px solid #27272a;
-                border-radius: 6px;
-                color: #e4e4e7;
-                font-size: 0.85rem;
-            }
-
-            .property-input:focus {
-                outline: none;
-                border-color: #a78bfa;
-            }
-
-            .property-select {
-                width: 100%;
-                padding: 0.5rem 0.75rem;
-                background: #0a0a0f;
-                border: 1px solid #27272a;
-                border-radius: 6px;
-                color: #e4e4e7;
-                font-size: 0.85rem;
-                cursor: pointer;
-            }
-
-            .property-select:focus {
-                outline: none;
-                border-color: #a78bfa;
-            }
-
-            .code-panel {
-                background: #18181b;
-                border: 1px solid #27272a;
-                border-radius: 8px;
-                overflow: hidden;
-            }
-
-            .code-header {
-                background: #1f1f23;
-                padding: 0.75rem 0.875rem;
-                border-bottom: 1px solid #27272a;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .code-title {
-                font-size: 0.85rem;
-                font-weight: 600;
-                color: #a78bfa;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-
-            .code-output {
-                padding: 1rem;
-                background: #0a0a0f;
-                color: #e4e4e7;
-                font-family: 'JetBrains Mono', monospace;
-                font-size: 0.8rem;
-                line-height: 1.6;
-                overflow-x: auto;
-                max-height: 300px;
-                overflow-y: auto;
-            }
-
-            @media (max-width: 1024px) {
-                .editor-layout {
-                    grid-template-columns: 1fr;
-                }
-
-                .toolbar {
-                    justify-content: center;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <nav class="navbar">
-            <a href="../index.html" class="logo">PRISM.TOOLS</a>
-            <a href="https://www.paypal.com/paypalme/BLGApps" target="_blank" class="donate-btn">☕ Donate</a>
-            <a href="../index.html" class="back-link">← All Tools</a>
-        </nav>
-
-        <div class="container">
-            <div class="header">
-                <h1>🎨 SVG Editor</h1>
-                <p>Create and edit SVG graphics with drawing tools</p>
-            </div>
-
-            <div class="toolbar">
-                <div class="tool-group">
-                    <button class="tool-btn" onclick="document.getElementById('svg-file-input').click()" title="Import SVG">
-                        <span>📂</span>
-                    </button>
-                    <input type="file" id="svg-file-input" accept=".svg,image/svg+xml" style="display: none;" />
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="tool-group">
-                    <button class="tool-btn active" data-tool="select" title="Select">
-                        <span>👆</span>
-                    </button>
-                    <button class="tool-btn" data-tool="rect" title="Rectangle">
-                        <span>▭</span>
-                    </button>
-                    <button class="tool-btn" data-tool="circle" title="Circle">
-                        <span>●</span>
-                    </button>
-                    <button class="tool-btn" data-tool="line" title="Line">
-                        <span>╱</span>
-                    </button>
-                    <button class="tool-btn" data-tool="pen" title="Pen">
-                        <span>✏️</span>
-                    </button>
-                    <button class="tool-btn" data-tool="text" title="Text">
-                        <span>T</span>
-                    </button>
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="tool-group">
-                    <div class="color-picker-group">
-                        <label>Fill:</label>
-                        <input type="color" id="fill-color" value="#A78BFA" />
-                    </div>
-                    <div class="color-picker-group">
-                        <label>Stroke:</label>
-                        <input type="color" id="stroke-color" value="#000000" />
-                    </div>
-                    <div class="number-input-group">
-                        <label>Width:</label>
-                        <input type="number" id="stroke-width" min="0" max="50" value="2" />
-                    </div>
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="tool-group">
-                    <button class="btn-icon" onclick="undo()" title="Undo">↶</button>
-                    <button class="btn-icon" onclick="redo()" title="Redo">↷</button>
-                    <button class="btn-icon" onclick="deleteSelected()" title="Delete">🗑️</button>
-                    <button class="btn-icon" onclick="clearCanvas()" title="Clear All">⊗</button>
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="tool-group">
-                    <button class="btn-icon" onclick="downloadSVG()" title="Download SVG">💾</button>
-                    <button class="btn-icon" onclick="downloadPNG()" title="Download PNG">🖼️</button>
-                    <button class="btn-icon" onclick="copySVGCode()" title="Copy SVG Code">📋</button>
-                </div>
-            </div>
-
-            <div class="editor-layout">
-                <div class="canvas-panel">
-                    <div class="canvas-header">
-                        <span class="canvas-title">Canvas</span>
-                        <div class="canvas-controls">
-                            <button class="btn-small" onclick="setCanvasSize(400, 400)">400×400</button>
-                            <button class="btn-small" onclick="setCanvasSize(600, 400)">600×400</button>
-                            <button class="btn-small" onclick="toggleGrid()">Grid</button>
-                        </div>
-                    </div>
-                    <div class="canvas-container" id="canvas-container">
-                        <svg id="canvas" width="500" height="500">
-                            <defs>
-                                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#3f3f46" stroke-width="0.5" />
-                                </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="#0a0a0f" />
-                            <rect id="grid-layer" width="100%" height="100%" fill="url(#grid)" style="display: none" />
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="properties-panel">
-                    <div class="panel-header">Properties</div>
-                    <div class="panel-content" id="properties-content">
-                        <div class="property-empty">Select an object to edit properties</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="code-panel">
-                <div class="code-header">
-                    <span class="code-title">SVG Code</span>
-                    <button class="btn-small" onclick="copySVGCode()">📋 Copy</button>
-                </div>
-                <pre class="code-output" id="svg-code"></pre>
-            </div>
+                <text x="315" y="58" font-size="12" fill="#FF6B6B">Format/Parse</text>
+                <text x="315" y="83" font-size="12" fill="#FFA500">Security/Dev</text>
+                <text x="315" y="108" font-size="12" fill="#FFD93D">Visual/CSS</text>
+                <text x="300" y="133" font-size="12" fill="#6BCF7F">Generate/Content</text>
+                <text x="290" y="158" font-size="12" fill="#4D96FF">Encode/Transform</text>
+            </svg>
         </div>
 
-        <script>
-            let currentTool = 'select';
-            let isDrawing = false;
-            let startX, startY;
-            let currentShape = null;
-            let selectedElement = null;
-            let shapes = [];
-            let history = [];
-            let historyIndex = -1;
+        <div class="sidebar">
+            <div class="sidebar-header">Object Properties</div>
+            <div id="properties-panel">
+                <div class="empty-state">Select an element to edit its properties.</div>
+            </div>
+        </div>
+    </div>
 
-            const canvas = document.getElementById('canvas');
-            const svgNS = 'http://www.w3.org/2000/svg';
+    <script>
+        const canvas = document.getElementById('canvas');
+        const canvasArea = document.getElementById('canvas-area');
+        const svgNS = "http://www.w3.org/2000/svg";
+        let currentTool = 'select';
+        let selectedElements = [];
+        let history = [];
+        let historyIndex = -1;
+        let isDrawing = false;
+        let isDragging = false;
+        let startPoint = null;
+        let currentElement = null;
+        let polygonPoints = [];
+        let dragStartPt = null;
+        let initialTrans = [];
+        let bgMode = 0; // 0=dark, 1=light, 2=checker
+        let scaleLocked = false;
+        let transformInterval = null;
+        let transformDirection = 0;
 
-            // Tool selection
-            document.querySelectorAll('.tool-btn').forEach((btn) => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.tool-btn').forEach((b) => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    currentTool = btn.dataset.tool;
-                    canvas.style.cursor = currentTool === 'select' ? 'default' : 'crosshair';
-                    deselectElement();
-                });
+        const webSafeFonts = [
+            'Arial, sans-serif',
+            'Helvetica, sans-serif',
+            'Times New Roman, serif',
+            'Courier New, monospace',
+            'Verdana, sans-serif',
+            'Georgia, serif',
+            'Palatino, serif',
+            'Garamond, serif',
+            'sans-serif',
+            'serif',
+            'monospace'
+        ];
+
+        function toggleBackground() {
+            bgMode = (bgMode + 1) % 3;
+            if (bgMode === 0) canvas.style.background = '#0a0a0f';
+            else if (bgMode === 1) canvas.style.background = '#ffffff';
+            else canvas.style.background = '#b8b8b8';
+        }
+
+        function getMousePos(e) {
+            let pt = canvas.createSVGPoint();
+            pt.x = e.clientX;
+            pt.y = e.clientY;
+            return pt.matrixTransform(canvas.getScreenCTM().inverse());
+        }
+
+        function getDefs() {
+            let defs = canvas.querySelector('defs');
+            if (!defs) {
+                defs = document.createElementNS(svgNS, 'defs');
+                canvas.insertBefore(defs, canvas.firstChild);
+            }
+            return defs;
+        }
+
+        function setDefaultStyle(el) {
+            el.setAttribute('fill', '#a78bfa');
+            el.setAttribute('stroke', '#27272a');
+            el.setAttribute('stroke-width', '1');
+            if (el.tagName === 'line') el.setAttribute('fill', 'none');
+            if (el.tagName === 'text') {
+                el.setAttribute('fill', '#e4e4e7');
+                el.setAttribute('font-size', '16');
+                el.setAttribute('font-family', 'sans-serif');
+            }
+        }
+
+        function switchToSelectTool() {
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-tool="select"]').classList.add('active');
+            currentTool = 'select';
+            polygonPoints = [];
+            currentElement = null;
+        }
+
+        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentTool = btn.dataset.tool;
+                polygonPoints = [];
+                currentElement = null;
             });
+        });
 
-            // Mouse events
-            canvas.addEventListener('mousedown', handleMouseDown);
-            canvas.addEventListener('mousemove', handleMouseMove);
-            canvas.addEventListener('mouseup', handleMouseUp);
+        canvasArea.addEventListener('mousedown', e => {
+            if (e.target.closest('svg') !== canvas) return;
+            const pt = getMousePos(e);
 
-            function handleMouseDown(e) {
-                const rect = canvas.getBoundingClientRect();
-                startX = e.clientX - rect.left;
-                startY = e.clientY - rect.top;
+            if (currentTool === 'select') {
+                let clicked = e.target;
+                if (clicked === canvas) { if (!e.shiftKey) deselectAll(); return; }
+                let target = clicked.closest('rect, ellipse, circle, line, polygon, polyline, path, text, g');
+                if (!target) { if (!e.shiftKey) deselectAll(); return; }
 
-                if (currentTool === 'select') {
-                    const target = e.target;
-                    if (target !== canvas && target.id !== 'grid-layer') {
-                        selectElement(target);
-                    } else {
-                        deselectElement();
-                    }
-                    return;
+                let parent = target.parentNode;
+                while (parent && parent.tagName === 'g' && parent !== canvas) {
+                    target = parent;
+                    parent = parent.parentNode;
                 }
 
-                isDrawing = true;
+                if (e.shiftKey) toggleSelection(target);
+                else { deselectAll(); selectElement(target); }
 
-                const fillColor = document.getElementById('fill-color').value;
-                const strokeColor = document.getElementById('stroke-color').value;
-                const strokeWidth = document.getElementById('stroke-width').value;
-
-                if (currentTool === 'rect') {
-                    currentShape = document.createElementNS(svgNS, 'rect');
-                    currentShape.setAttribute('x', startX);
-                    currentShape.setAttribute('y', startY);
-                    currentShape.setAttribute('fill', fillColor);
-                    currentShape.setAttribute('stroke', strokeColor);
-                    currentShape.setAttribute('stroke-width', strokeWidth);
-                    canvas.appendChild(currentShape);
-                } else if (currentTool === 'circle') {
-                    currentShape = document.createElementNS(svgNS, 'circle');
-                    currentShape.setAttribute('cx', startX);
-                    currentShape.setAttribute('cy', startY);
-                    currentShape.setAttribute('r', 0);
-                    currentShape.setAttribute('fill', fillColor);
-                    currentShape.setAttribute('stroke', strokeColor);
-                    currentShape.setAttribute('stroke-width', strokeWidth);
-                    canvas.appendChild(currentShape);
-                } else if (currentTool === 'line') {
-                    currentShape = document.createElementNS(svgNS, 'line');
-                    currentShape.setAttribute('x1', startX);
-                    currentShape.setAttribute('y1', startY);
-                    currentShape.setAttribute('x2', startX);
-                    currentShape.setAttribute('y2', startY);
-                    currentShape.setAttribute('stroke', strokeColor);
-                    currentShape.setAttribute('stroke-width', strokeWidth);
-                    canvas.appendChild(currentShape);
-                } else if (currentTool === 'pen') {
-                    currentShape = document.createElementNS(svgNS, 'path');
-                    currentShape.setAttribute('d', `M ${startX} ${startY}`);
-                    currentShape.setAttribute('fill', 'none');
-                    currentShape.setAttribute('stroke', strokeColor);
-                    currentShape.setAttribute('stroke-width', strokeWidth);
-                    currentShape.setAttribute('stroke-linecap', 'round');
-                    currentShape.setAttribute('stroke-linejoin', 'round');
-                    canvas.appendChild(currentShape);
-                } else if (currentTool === 'text') {
-                    const text = prompt('Enter text:', 'Text');
-                    if (text) {
-                        const textElement = document.createElementNS(svgNS, 'text');
-                        textElement.setAttribute('x', startX);
-                        textElement.setAttribute('y', startY);
-                        textElement.setAttribute('fill', fillColor);
-                        textElement.setAttribute('font-size', '24');
-                        textElement.setAttribute('font-family', 'Arial');
-                        textElement.textContent = text;
-                        canvas.appendChild(textElement);
-                        shapes.push(textElement);
-                        saveHistory();
-                        updateSVGCode();
-                    }
-                    isDrawing = false;
-                }
-            }
-
-            function handleMouseMove(e) {
-                if (!isDrawing || !currentShape) return;
-
-                const rect = canvas.getBoundingClientRect();
-                const currentX = e.clientX - rect.left;
-                const currentY = e.clientY - rect.top;
-
-                if (currentTool === 'rect') {
-                    const width = currentX - startX;
-                    const height = currentY - startY;
-
-                    if (width < 0) {
-                        currentShape.setAttribute('x', currentX);
-                        currentShape.setAttribute('width', Math.abs(width));
-                    } else {
-                        currentShape.setAttribute('width', width);
-                    }
-
-                    if (height < 0) {
-                        currentShape.setAttribute('y', currentY);
-                        currentShape.setAttribute('height', Math.abs(height));
-                    } else {
-                        currentShape.setAttribute('height', height);
-                    }
-                } else if (currentTool === 'circle') {
-                    const radius = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
-                    currentShape.setAttribute('r', radius);
-                } else if (currentTool === 'line') {
-                    currentShape.setAttribute('x2', currentX);
-                    currentShape.setAttribute('y2', currentY);
-                } else if (currentTool === 'pen') {
-                    const d = currentShape.getAttribute('d');
-                    currentShape.setAttribute('d', d + ` L ${currentX} ${currentY}`);
-                }
-            }
-
-            function handleMouseUp(e) {
-                if (isDrawing && currentShape) {
-                    shapes.push(currentShape);
-                    saveHistory();
-                    updateSVGCode();
-                }
-                isDrawing = false;
-                currentShape = null;
-            }
-
-            function selectElement(element) {
-                deselectElement();
-                selectedElement = element;
-                element.setAttribute('stroke-dasharray', '5,5');
-                element.setAttribute('data-original-stroke', element.getAttribute('stroke') || 'none');
-                element.setAttribute('stroke', '#A78BFA');
-                showProperties(element);
-            }
-
-            function deselectElement() {
-                if (selectedElement) {
-                    selectedElement.removeAttribute('stroke-dasharray');
-                    const originalStroke = selectedElement.getAttribute('data-original-stroke');
-                    if (originalStroke !== 'none') {
-                        selectedElement.setAttribute('stroke', originalStroke);
-                    }
-                    selectedElement.removeAttribute('data-original-stroke');
-                    selectedElement = null;
-                }
-                hideProperties();
-            }
-
-            function getRotation(element) {
-                const transform = element.getAttribute('transform');
-                if (!transform || !transform.includes('rotate')) return 0;
-                const match = transform.match(/rotate\(([^)]+)\)/);
-                return match ? parseFloat(match[1].split(',')[0]) : 0;
-            }
-
-            function setRotation(degrees) {
-                if (!selectedElement) return;
-
-                const bbox = selectedElement.getBBox();
-                const cx = bbox.x + bbox.width / 2;
-                const cy = bbox.y + bbox.height / 2;
-
-                if (degrees == 0) {
-                    selectedElement.removeAttribute('transform');
-                } else {
-                    selectedElement.setAttribute('transform', `rotate(${degrees},${cx},${cy})`);
-                }
-
-                saveHistory();
-                updateSVGCode();
-            }
-
-            function updateStrokeDashArray(style) {
-                if (!selectedElement) return;
-
-                switch (style) {
-                    case 'solid':
-                        selectedElement.removeAttribute('stroke-dasharray');
-                        break;
-                    case 'dashed':
-                        selectedElement.setAttribute('stroke-dasharray', '10,5');
-                        break;
-                    case 'dotted':
-                        selectedElement.setAttribute('stroke-dasharray', '2,3');
-                        break;
-                }
-
-                saveHistory();
-                updateSVGCode();
-            }
-
-            function getCurrentStrokeStyle(element) {
-                const dashArray = element.getAttribute('stroke-dasharray');
-                if (!dashArray) return 'solid';
-                if (dashArray === '10,5') return 'dashed';
-                if (dashArray === '2,3') return 'dotted';
-                return 'solid';
-            }
-
-            function showProperties(element) {
-                const panel = document.getElementById('properties-content');
-                const tagName = element.tagName;
-
-                let html = '';
-
-                if (tagName === 'rect') {
-                    html = `
-      <div class="property-group">
-        <label class="property-label">X Position</label>
-        <input type="number" class="property-input" value="${element.getAttribute('x')}" onchange="updateProperty('x', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Y Position</label>
-        <input type="number" class="property-input" value="${element.getAttribute('y')}" onchange="updateProperty('y', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Width</label>
-        <input type="number" class="property-input" value="${element.getAttribute('width')}" onchange="updateProperty('width', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Height</label>
-        <input type="number" class="property-input" value="${element.getAttribute('height')}" onchange="updateProperty('height', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Corner Radius (rx)</label>
-        <input type="number" class="property-input" value="${element.getAttribute('rx') || '0'}" onchange="updateProperty('rx', this.value)">
-      </div>
-    `;
-                } else if (tagName === 'circle') {
-                    html = `
-      <div class="property-group">
-        <label class="property-label">Center X</label>
-        <input type="number" class="property-input" value="${element.getAttribute('cx')}" onchange="updateProperty('cx', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Center Y</label>
-        <input type="number" class="property-input" value="${element.getAttribute('cy')}" onchange="updateProperty('cy', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Radius</label>
-        <input type="number" class="property-input" value="${element.getAttribute('r')}" onchange="updateProperty('r', this.value)">
-      </div>
-    `;
-                } else if (tagName === 'line') {
-                    html = `
-      <div class="property-group">
-        <label class="property-label">X1</label>
-        <input type="number" class="property-input" value="${element.getAttribute('x1')}" onchange="updateProperty('x1', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Y1</label>
-        <input type="number" class="property-input" value="${element.getAttribute('y1')}" onchange="updateProperty('y1', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">X2</label>
-        <input type="number" class="property-input" value="${element.getAttribute('x2')}" onchange="updateProperty('x2', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Y2</label>
-        <input type="number" class="property-input" value="${element.getAttribute('y2')}" onchange="updateProperty('y2', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Line Cap</label>
-        <select class="property-select" onchange="updateProperty('stroke-linecap', this.value)">
-          <option value="butt" ${element.getAttribute('stroke-linecap') === 'butt' ? 'selected' : ''}>Butt</option>
-          <option value="round" ${element.getAttribute('stroke-linecap') === 'round' ? 'selected' : ''}>Round</option>
-          <option value="square" ${element.getAttribute('stroke-linecap') === 'square' ? 'selected' : ''}>Square</option>
-        </select>
-      </div>
-    `;
-                } else if (tagName === 'text') {
-                    html = `
-      <div class="property-group">
-        <label class="property-label">Text Content</label>
-        <input type="text" class="property-input" value="${element.textContent}" onchange="updateProperty('textContent', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">X Position</label>
-        <input type="number" class="property-input" value="${element.getAttribute('x')}" onchange="updateProperty('x', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Y Position</label>
-        <input type="number" class="property-input" value="${element.getAttribute('y')}" onchange="updateProperty('y', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Font Size</label>
-        <input type="number" class="property-input" value="${element.getAttribute('font-size')}" onchange="updateProperty('font-size', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Font Family</label>
-        <select class="property-select" onchange="updateProperty('font-family', this.value)">
-          <option value="Arial" ${element.getAttribute('font-family') === 'Arial' ? 'selected' : ''}>Arial</option>
-          <option value="Helvetica" ${element.getAttribute('font-family') === 'Helvetica' ? 'selected' : ''}>Helvetica</option>
-          <option value="Times New Roman" ${element.getAttribute('font-family') === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
-          <option value="Courier New" ${element.getAttribute('font-family') === 'Courier New' ? 'selected' : ''}>Courier New</option>
-          <option value="Georgia" ${element.getAttribute('font-family') === 'Georgia' ? 'selected' : ''}>Georgia</option>
-          <option value="Verdana" ${element.getAttribute('font-family') === 'Verdana' ? 'selected' : ''}>Verdana</option>
-        </select>
-      </div>
-      <div class="property-group">
-        <label class="property-label">Font Weight</label>
-        <select class="property-select" onchange="updateProperty('font-weight', this.value)">
-          <option value="normal" ${element.getAttribute('font-weight') === 'normal' || !element.getAttribute('font-weight') ? 'selected' : ''}>Normal</option>
-          <option value="bold" ${element.getAttribute('font-weight') === 'bold' ? 'selected' : ''}>Bold</option>
-          <option value="lighter" ${element.getAttribute('font-weight') === 'lighter' ? 'selected' : ''}>Lighter</option>
-          <option value="bolder" ${element.getAttribute('font-weight') === 'bolder' ? 'selected' : ''}>Bolder</option>
-        </select>
-      </div>
-      <div class="property-group">
-        <label class="property-label">Letter Spacing</label>
-        <input type="number" class="property-input" value="${element.getAttribute('letter-spacing') || '0'}" onchange="updateProperty('letter-spacing', this.value)">
-      </div>
-    `;
-                }
-
-                // Common properties for all shapes
-                html += `
-    <div class="property-group">
-      <label class="property-label">Fill Color</label>
-      <input type="color" class="property-input" value="${element.getAttribute('fill') || '#000000'}" onchange="updateProperty('fill', this.value)">
-    </div>
-  `;
-
-                if (tagName !== 'text') {
-                    html += `
-      <div class="property-group">
-        <label class="property-label">Stroke Color</label>
-        <input type="color" class="property-input" value="${element.getAttribute('stroke') || '#000000'}" onchange="updateProperty('stroke', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Stroke Width</label>
-        <input type="number" class="property-input" value="${element.getAttribute('stroke-width') || '1'}" onchange="updateProperty('stroke-width', this.value)">
-      </div>
-      <div class="property-group">
-        <label class="property-label">Stroke Style</label>
-        <select class="property-select" onchange="updateStrokeDashArray(this.value)">
-          <option value="solid" ${getCurrentStrokeStyle(element) === 'solid' ? 'selected' : ''}>Solid</option>
-          <option value="dashed" ${getCurrentStrokeStyle(element) === 'dashed' ? 'selected' : ''}>Dashed</option>
-          <option value="dotted" ${getCurrentStrokeStyle(element) === 'dotted' ? 'selected' : ''}>Dotted</option>
-        </select>
-      </div>
-    `;
-                }
-
-                // Transform properties for all shapes
-                html += `
-    <div class="property-group">
-      <label class="property-label">Opacity</label>
-      <input type="number" class="property-input" min="0" max="1" step="0.1" value="${element.getAttribute('opacity') || '1'}" onchange="updateProperty('opacity', this.value)">
-    </div>
-    <div class="property-group">
-      <label class="property-label">Rotation (degrees)</label>
-      <input type="number" class="property-input" value="${getRotation(element)}" onchange="setRotation(this.value)">
-    </div>
-  `;
-
-                panel.innerHTML = html;
-            }
-
-            function hideProperties() {
-                const panel = document.getElementById('properties-content');
-                panel.innerHTML = '<div class="property-empty">Select an object to edit properties</div>';
-            }
-
-            function updateProperty(prop, value) {
-                if (!selectedElement) return;
-
-                if (prop === 'textContent') {
-                    selectedElement.textContent = value;
-                } else {
-                    selectedElement.setAttribute(prop, value);
-                }
-
-                saveHistory();
-                updateSVGCode();
-            }
-
-            function deleteSelected() {
-                if (selectedElement && selectedElement !== canvas) {
-                    selectedElement.remove();
-                    shapes = shapes.filter((s) => s !== selectedElement);
-                    selectedElement = null;
-                    hideProperties();
-                    saveHistory();
-                    updateSVGCode();
-                }
-            }
-
-            function clearCanvas() {
-                if (confirm('Clear all shapes?')) {
-                    shapes.forEach((shape) => shape.remove());
-                    shapes = [];
-                    deselectElement();
-                    saveHistory();
-                    updateSVGCode();
-                }
-            }
-
-            function saveHistory() {
-                history = history.slice(0, historyIndex + 1);
-                history.push(canvas.innerHTML);
-                historyIndex++;
-                if (history.length > 50) {
-                    history.shift();
-                    historyIndex--;
-                }
-            }
-
-            function undo() {
-                if (historyIndex > 0) {
-                    historyIndex--;
-                    canvas.innerHTML = history[historyIndex];
-                    updateShapesArray();
-                    updateSVGCode();
-                    deselectElement();
-                }
-            }
-
-            function redo() {
-                if (historyIndex < history.length - 1) {
-                    historyIndex++;
-                    canvas.innerHTML = history[historyIndex];
-                    updateShapesArray();
-                    updateSVGCode();
-                    deselectElement();
-                }
-            }
-
-            function updateShapesArray() {
-                shapes = Array.from(canvas.children).filter(
-                    (el) => (el.tagName !== 'defs' && el.id !== 'grid-layer' && el.tagName !== 'rect') || el.id !== 'grid-layer'
-                );
-            }
-
-            function setCanvasSize(width, height) {
-                canvas.setAttribute('width', width);
-                canvas.setAttribute('height', height);
-                updateSVGCode();
-            }
-
-            function toggleGrid() {
-                const grid = document.getElementById('grid-layer');
-                grid.style.display = grid.style.display === 'none' ? 'block' : 'none';
-            }
-
-            function updateSVGCode() {
-                const code = document.getElementById('svg-code');
-                const svgClone = canvas.cloneNode(true);
-
-                // Remove grid from export
-                const grid = svgClone.querySelector('#grid-layer');
-                if (grid) grid.remove();
-
-                // Remove selection indicators
-                Array.from(svgClone.children).forEach((child) => {
-                    child.removeAttribute('stroke-dasharray');
-                    if (child.getAttribute('data-original-stroke')) {
-                        child.setAttribute('stroke', child.getAttribute('data-original-stroke'));
-                        child.removeAttribute('data-original-stroke');
-                    }
-                });
-
-                // Format SVG
-                const serializer = new XMLSerializer();
-                let svgString = serializer.serializeToString(svgClone);
-                svgString = svgString.replace(/></g, '>\n<');
-
-                code.textContent = svgString;
-                trackUsage();
-            }
-
-            function copySVGCode() {
-                const code = document.getElementById('svg-code').textContent;
-                navigator.clipboard.writeText(code).then(() => {
-                    alert('SVG code copied to clipboard!');
-                });
-            }
-
-            function downloadSVG() {
-                const code = document.getElementById('svg-code').textContent;
-                const blob = new Blob([code], { type: 'image/svg+xml' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'drawing.svg';
-                a.click();
-                URL.revokeObjectURL(url);
-            }
-
-            function downloadPNG() {
-                const svgClone = canvas.cloneNode(true);
-                const grid = svgClone.querySelector('#grid-layer');
-                if (grid) grid.remove();
-
-                Array.from(svgClone.children).forEach((child) => {
-                    child.removeAttribute('stroke-dasharray');
-                    if (child.getAttribute('data-original-stroke')) {
-                        child.setAttribute('stroke', child.getAttribute('data-original-stroke'));
-                        child.removeAttribute('data-original-stroke');
-                    }
-                });
-
-                const serializer = new XMLSerializer();
-                const svgString = serializer.serializeToString(svgClone);
-                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-                const url = URL.createObjectURL(svgBlob);
-
-                const img = new Image();
-                img.onload = () => {
-                    const canvas2d = document.createElement('canvas');
-                    canvas2d.width = parseInt(canvas.getAttribute('width'));
-                    canvas2d.height = parseInt(canvas.getAttribute('height'));
-                    const ctx = canvas2d.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-
-                    canvas2d.toBlob((blob) => {
-                        const pngUrl = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = pngUrl;
-                        a.download = 'drawing.png';
-                        a.click();
-                        URL.revokeObjectURL(pngUrl);
-                        URL.revokeObjectURL(url);
+                if (selectedElements.some(el => el === target || el.contains(target))) {
+                    isDragging = true;
+                    dragStartPt = pt;
+                    initialTrans = selectedElements.map(el => {
+                        let tx = 0, ty = 0;
+                        const t = el.getAttribute('transform') || '';
+                        const match = t.match(/translate\(([-\d.]+),([-\d.]+)\)/);
+                        if (match) { tx = parseFloat(match[1]); ty = parseFloat(match[2]); }
+                        return {tx, ty};
                     });
-                };
-                img.src = url;
+                }
+                return;
             }
 
-            function trackUsage() {
-                let count = parseInt(localStorage.getItem('prism-usage-count') || '0');
-                count++;
-                localStorage.setItem('prism-usage-count', count);
+            isDrawing = true;
+            startPoint = pt;
+
+            if (currentTool === 'rect') {
+                currentElement = document.createElementNS(svgNS, 'rect');
+                currentElement.setAttribute('x', pt.x);
+                currentElement.setAttribute('y', pt.y);
+                currentElement.setAttribute('width', 0);
+                currentElement.setAttribute('height', 0);
+                setDefaultStyle(currentElement);
+                canvas.appendChild(currentElement);
+            } else if (currentTool === 'ellipse') {
+                currentElement = document.createElementNS(svgNS, 'ellipse');
+                currentElement.setAttribute('cx', pt.x);
+                currentElement.setAttribute('cy', pt.y);
+                currentElement.setAttribute('rx', 0);
+                currentElement.setAttribute('ry', 0);
+                setDefaultStyle(currentElement);
+                canvas.appendChild(currentElement);
+            } else if (currentTool === 'line') {
+                currentElement = document.createElementNS(svgNS, 'line');
+                currentElement.setAttribute('x1', pt.x);
+                currentElement.setAttribute('y1', pt.y);
+                currentElement.setAttribute('x2', pt.x);
+                currentElement.setAttribute('y2', pt.y);
+                setDefaultStyle(currentElement);
+                canvas.appendChild(currentElement);
+            } else if (currentTool === 'polygon') {
+                polygonPoints.push(`${pt.x},${pt.y}`);
+                if (!currentElement) {
+                    currentElement = document.createElementNS(svgNS, 'polygon');
+                    setDefaultStyle(currentElement);
+                    canvas.appendChild(currentElement);
+                }
+                currentElement.setAttribute('points', polygonPoints.join(' '));
+            } else if (currentTool === 'arc') {
+                currentElement = document.createElementNS(svgNS, 'path');
+                currentElement.dataset.type = 'arc';
+                currentElement.setAttribute('fill', 'none');
+                currentElement.setAttribute('stroke', '#a78bfa');
+                currentElement.setAttribute('stroke-width', '1');
+                canvas.appendChild(currentElement);
+            } else if (currentTool === 'text') {
+                isDrawing = false;
+                const text = document.createElementNS(svgNS, 'text');
+                text.setAttribute('x', pt.x);
+                text.setAttribute('y', pt.y);
+                text.textContent = 'Text';
+                setDefaultStyle(text);
+                canvas.appendChild(text);
+                deselectAll();
+                selectElement(text);
+                saveHistory();
+                switchToSelectTool(); // Auto-switch to select tool after placing text
+            }
+        });
+
+        canvasArea.addEventListener('mousemove', e => {
+            if (!isDrawing && !isDragging) return;
+            const pt = getMousePos(e);
+
+            if (isDragging) {
+                const dx = pt.x - dragStartPt.x;
+                const dy = pt.y - dragStartPt.y;
+                selectedElements.forEach((el, i) => {
+                    const tx = initialTrans[i].tx + dx;
+                    const ty = initialTrans[i].ty + dy;
+                    el.setAttribute('transform', `translate(${tx},${ty})`);
+                });
+                return;
             }
 
-            // SVG Import functionality
-            document.getElementById('svg-file-input').addEventListener('change', function (e) {
-                const file = e.target.files[0];
-                if (!file) return;
+            if (!currentElement) return;
 
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    try {
-                        const parser = new DOMParser();
-                        const svgDoc = parser.parseFromString(event.target.result, 'image/svg+xml');
-                        const importedSvg = svgDoc.querySelector('svg');
+            if (currentTool === 'rect') {
+                let x = Math.min(startPoint.x, pt.x);
+                let y = Math.min(startPoint.y, pt.y);
+                let w = Math.abs(pt.x - startPoint.x);
+                let h = Math.abs(pt.y - startPoint.y);
+                if (e.shiftKey) {
+                    const s = Math.min(w, h);
+                    w = h = s;
+                    x = pt.x < startPoint.x ? startPoint.x - s : startPoint.x;
+                    y = pt.y < startPoint.y ? startPoint.y - s : startPoint.y;
+                }
+                currentElement.setAttribute('x', x);
+                currentElement.setAttribute('y', y);
+                currentElement.setAttribute('width', w);
+                currentElement.setAttribute('height', h);
+            } else if (currentTool === 'ellipse') {
+                const cx = (startPoint.x + pt.x) / 2;
+                const cy = (startPoint.y + pt.y) / 2;
+                let rx = Math.abs(pt.x - startPoint.x) / 2;
+                let ry = Math.abs(pt.y - startPoint.y) / 2;
+                if (e.shiftKey) ry = rx;
+                currentElement.setAttribute('cx', cx);
+                currentElement.setAttribute('cy', cy);
+                currentElement.setAttribute('rx', rx);
+                currentElement.setAttribute('ry', ry);
+            } else if (currentTool === 'line') {
+                currentElement.setAttribute('x2', pt.x);
+                currentElement.setAttribute('y2', pt.y);
+            } else if (currentTool === 'arc') {
+                const cx = (startPoint.x + pt.x) / 2;
+                const cy = (startPoint.y + pt.y) / 2;
+                let rx = Math.abs(pt.x - startPoint.x) / 2;
+                let ry = Math.abs(pt.y - startPoint.y) / 2;
+                if (e.shiftKey) ry = rx;
+                currentElement.dataset.cx = cx;
+                currentElement.dataset.cy = cy;
+                currentElement.dataset.rx = rx;
+                currentElement.dataset.ry = ry;
+                currentElement.dataset.startAngle = 0;
+                currentElement.dataset.endAngle = 180;
+                currentElement.dataset.largeArc = 0;
+                currentElement.dataset.sweep = 1;
+                refreshArc(currentElement);
+            }
+        });
 
-                        if (!importedSvg) {
-                            alert('Invalid SVG file');
-                            return;
-                        }
+        canvasArea.addEventListener('mouseup', () => {
+            if (isDragging) { isDragging = false; saveHistory(); return; }
+            if (!isDrawing) return;
+            isDrawing = false;
+            if (currentTool === 'polygon') return;
+            if (currentElement) {
+                deselectAll();
+                selectElement(currentElement);
+                currentElement = null;
+                saveHistory();
+                switchToSelectTool(); // Auto-switch to select tool after placing shape
+            }
+        });
 
-                        // Get current defs element
-                        const currentDefs = canvas.querySelector('defs');
+        canvas.addEventListener('dblclick', () => {
+            if (currentTool === 'polygon' && polygonPoints.length >= 3) {
+                deselectAll();
+                selectElement(currentElement);
+                currentElement = null;
+                polygonPoints = [];
+                saveHistory();
+                switchToSelectTool(); // Auto-switch to select tool after finishing polygon
+            }
+        });
 
-                        // Clear current canvas (except background and grid)
-                        const background = canvas.querySelector('rect[width="100%"]');
-                        const gridLayer = canvas.querySelector('#grid-layer');
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && currentTool === 'polygon' && currentElement) {
+                currentElement.remove();
+                polygonPoints = [];
+                currentElement = null;
+                switchToSelectTool(); // Auto-switch to select tool after canceling polygon
+            }
+        });
 
-                        // Remove all shapes
-                        shapes.forEach((shape) => shape.remove());
-                        shapes = [];
+        function selectElement(el) {
+            if (!selectedElements.includes(el)) {
+                selectedElements.push(el);
+                el.setAttribute('selected', 'true');
+                renderProperties();
+            }
+        }
 
-                        // Import defs from the SVG (gradients, patterns, etc.)
-                        const importedDefs = importedSvg.querySelector('defs');
-                        if (importedDefs) {
-                            // Clone all children from imported defs into current defs
-                            Array.from(importedDefs.children).forEach((child) => {
-                                // Skip the grid pattern to avoid duplicates
-                                if (child.id !== 'grid') {
-                                    const cloned = child.cloneNode(true);
-                                    currentDefs.appendChild(cloned);
-                                }
-                            });
-                        }
+        function toggleSelection(el) {
+            if (selectedElements.includes(el)) {
+                selectedElements = selectedElements.filter(i => i !== el);
+                el.removeAttribute('selected');
+            } else selectElement(el);
+            renderProperties();
+        }
 
-                        // Import all elements from the SVG
-                        Array.from(importedSvg.children).forEach((child) => {
-                            if (child.tagName === 'defs') return; // Skip defs, already handled
+        function deselectAll() {
+            selectedElements.forEach(el => el.removeAttribute('selected'));
+            selectedElements = [];
+            document.getElementById('properties-panel').innerHTML = '<div class="empty-state">Select an element to edit its properties.</div>';
+        }
 
-                            const imported = child.cloneNode(true);
-                            canvas.appendChild(imported);
-
-                            // Add to shapes array if it's a drawable element
-                            if (['rect', 'circle', 'line', 'path', 'text', 'polygon', 'polyline', 'ellipse'].includes(imported.tagName)) {
-                                shapes.push(imported);
-                            }
-                        });
-
-                        // Update canvas size if specified in imported SVG
-                        const width = importedSvg.getAttribute('width');
-                        const height = importedSvg.getAttribute('height');
-                        if (width && height) {
-                            // Remove any units (px, pt, etc.) and convert to number
-                            const cleanWidth = parseInt(width);
-                            const cleanHeight = parseInt(height);
-                            if (!isNaN(cleanWidth) && !isNaN(cleanHeight)) {
-                                canvas.setAttribute('width', cleanWidth);
-                                canvas.setAttribute('height', cleanHeight);
-                            }
-                        }
-
-                        saveHistory();
-                        updateSVGCode();
-                        alert('SVG imported successfully!');
-                    } catch (error) {
-                        console.error('Error importing SVG:', error);
-                        alert("Error importing SVG file. Please ensure it's a valid SVG.");
+        function toggleSelectAll() {
+            if (selectedElements.length > 0) {
+                deselectAll();
+            } else {
+                deselectAll();
+                Array.from(canvas.children).forEach(el => {
+                    if (el.tagName !== 'defs') {
+                        selectElement(el);
                     }
+                });
+            }
+        }
 
-                    // Reset file input
-                    e.target.value = '';
-                };
-
-                reader.readAsText(file);
+        function groupSelection() {
+            if (selectedElements.length < 2) return;
+            const g = document.createElementNS(svgNS, 'g');
+            const parent = selectedElements[0].parentNode;
+            parent.insertBefore(g, selectedElements[0]);
+            selectedElements.forEach(el => {
+                el.removeAttribute('selected');
+                g.appendChild(el);
             });
-
-            // Initialize
+            deselectAll();
+            selectElement(g);
             saveHistory();
-            updateSVGCode();
-        </script>
-    </body>
+        }
+
+        function ungroupSelection() {
+            const toUngroup = [...selectedElements];
+            toUngroup.forEach(el => {
+                if (el.tagName.toLowerCase() === 'g' && el.children.length > 0) {
+                    const parent = el.parentNode;
+                    while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                    el.remove();
+                }
+            });
+            deselectAll();
+            saveHistory();
+        }
+
+        function deleteSelected() {
+            selectedElements.forEach(el => el.remove());
+            deselectAll();
+            saveHistory();
+        }
+
+        function fitToContent() {
+            deselectAll();
+            const bbox = canvas.getBBox();
+            const padding = 20;
+            canvas.setAttribute('viewBox', `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding*2} ${bbox.height + padding*2}`);
+            saveHistory();
+        }
+
+        function polarToCartesian(cx, cy, rx, ry, angleDeg) {
+            const angleRad = (angleDeg - 90) * Math.PI / 180.0;
+            return {
+                x: cx + rx * Math.cos(angleRad),
+                y: cy + ry * Math.sin(angleRad)
+            };
+        }
+
+        function refreshArc(el) {
+            const d = el.dataset;
+            if (!d.cx || !d.cy || !d.rx || !d.ry) return;
+            const start = polarToCartesian(parseFloat(d.cx), parseFloat(d.cy), parseFloat(d.rx), parseFloat(d.ry), parseFloat(d.startAngle));
+            const end = polarToCartesian(parseFloat(d.cx), parseFloat(d.cy), parseFloat(d.rx), parseFloat(d.ry), parseFloat(d.endAngle));
+            const large = d.largeArc || '0';
+            const sweep = d.sweep || '1';
+            const dStr = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${parseFloat(d.rx).toFixed(2)} ${parseFloat(d.ry).toFixed(2)} 0 ${large} ${sweep} ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+            el.setAttribute('d', dStr);
+        }
+
+        // --- Transformation Engine ---
+        function getElementCenter(el) {
+            const bbox = el.getBBox();
+            return {
+                x: bbox.x + bbox.width / 2,
+                y: bbox.y + bbox.height / 2
+            };
+        }
+
+        function getSelectionBBox() {
+            if (selectedElements.length === 0) return {x: 0, y: 0, width: 0, height: 0};
+            
+            const firstBBox = selectedElements[0].getBBox();
+            let minX = firstBBox.x;
+            let minY = firstBBox.y;
+            let maxX = firstBBox.x + firstBBox.width;
+            let maxY = firstBBox.y + firstBBox.height;
+            
+            for (let i = 1; i < selectedElements.length; i++) {
+                const bbox = selectedElements[i].getBBox();
+                minX = Math.min(minX, bbox.x);
+                minY = Math.min(minY, bbox.y);
+                maxX = Math.max(maxX, bbox.x + bbox.width);
+                maxY = Math.max(maxY, bbox.y + bbox.height);
+            }
+            
+            return {
+                x: minX,
+                y: minY,
+                width: maxX - minX,
+                height: maxY - minY
+            };
+        }
+
+        function getElementTransform(el) {
+            const d = el.dataset;
+            return {
+                tx: d.tx ? parseFloat(d.tx) : 0,
+                ty: d.ty ? parseFloat(d.ty) : 0,
+                rot: d.rot ? parseFloat(d.rot) : 0,
+                sx: d.sx ? parseFloat(d.sx) : 1,
+                sy: d.sy ? parseFloat(d.sy) : 1
+            };
+        }
+
+        function setElementTransform(el, transform) {
+            el.dataset.tx = transform.tx;
+            el.dataset.ty = transform.ty;
+            el.dataset.rot = transform.rot;
+            el.dataset.sx = transform.sx;
+            el.dataset.sy = transform.sy;
+            
+            const bbox = el.getBBox();
+            const cx = bbox.x + bbox.width / 2;
+            const cy = bbox.y + bbox.height / 2;
+            
+            el.setAttribute('transform', 
+                `translate(${transform.tx},${transform.ty}) translate(${cx},${cy}) rotate(${transform.rot}) scale(${transform.sx},${transform.sy}) translate(${-cx},${-cy})`
+            );
+        }
+
+        function applyGroupTransform(key, value, increment = false) {
+            if (selectedElements.length > 1 && (key === 'rot' || key === 'sx' || key === 'sy')) {
+                const groupBBox = getSelectionBBox();
+                const gcx = groupBBox.x + groupBBox.width / 2;
+                const gcy = groupBBox.y + groupBBox.height / 2;
+                
+                selectedElements.forEach(el => {
+                    const transform = getElementTransform(el);
+                    
+                    if (increment) {
+                        if (key === 'rot') transform.rot += value;
+                        else if (key === 'sx') transform.sx += value;
+                        else if (key === 'sy') transform.sy += value;
+                    } else {
+                        if (key === 'rot') transform.rot = value;
+                        else if (key === 'sx') transform.sx = value;
+                        else if (key === 'sy') transform.sy = value;
+                    }
+                    
+                    if (scaleLocked && (key === 'sx' || key === 'sy')) {
+                        if (key === 'sx') transform.sy = transform.sx;
+                        else if (key === 'sy') transform.sx = transform.sy;
+                    }
+                    
+                    el.setAttribute('transform', 
+                        `translate(${transform.tx},${transform.ty}) translate(${gcx},${gcy}) rotate(${transform.rot}) scale(${transform.sx},${transform.sy}) translate(${-gcx},${-gcy})`
+                    );
+                    
+                    setElementTransform(el, transform);
+                });
+            } else {
+                selectedElements.forEach(el => {
+                    const transform = getElementTransform(el);
+                    
+                    if (increment) {
+                        if (key === 'rot') transform.rot += value;
+                        else if (key === 'tx') transform.tx += value;
+                        else if (key === 'ty') transform.ty += value;
+                        else if (key === 'sx') transform.sx += value;
+                        else if (key === 'sy') transform.sy += value;
+                    } else {
+                        if (key === 'rot') transform.rot = value;
+                        else if (key === 'tx') transform.tx = value;
+                        else if (key === 'ty') transform.ty = value;
+                        else if (key === 'sx') transform.sx = value;
+                        else if (key === 'sy') transform.sy = value;
+                    }
+                    
+                    if (scaleLocked && (key === 'sx' || key === 'sy')) {
+                        if (key === 'sx') transform.sy = transform.sx;
+                        else if (key === 'sy') transform.sx = transform.sy;
+                    }
+                    
+                    setElementTransform(el, transform);
+                });
+            }
+            renderProperties();
+            saveHistory();
+        }
+
+        function startTransform(key, direction) {
+            if (transformInterval) clearInterval(transformInterval);
+            transformDirection = direction;
+            
+            function applyStep() {
+                let step = 1;
+                if (key === 'rot') step = 1;
+                else if (key === 'sx' || key === 'sy') step = 0.05;
+                else step = 1;
+                
+                applyGroupTransform(key, step * transformDirection, true);
+            }
+            
+            applyStep();
+            transformInterval = setInterval(applyStep, 50);
+        }
+
+        function stopTransform() {
+            if (transformInterval) {
+                clearInterval(transformInterval);
+                transformInterval = null;
+            }
+        }
+
+        function toggleScaleLock() {
+            scaleLocked = !scaleLocked;
+            const lockBtn = document.querySelector('.lock-btn');
+            if (lockBtn) lockBtn.classList.toggle('active', scaleLocked);
+        }
+
+        function renderProperties() {
+            const panel = document.getElementById('properties-panel');
+            if (selectedElements.length === 0) {
+                panel.innerHTML = '<div class="empty-state">Select an element to edit its properties.</div>';
+                return;
+            }
+            if (selectedElements.length > 1) {
+                const transform = getElementTransform(selectedElements[0]);
+                panel.innerHTML = `<div class="prop-group">
+                    <label class="prop-label">${selectedElements.length} items selected</label>
+                    <button style="width:100%" onclick="groupSelection()">Group Selection</button>
+                </div>
+                <div class="prop-group">
+                    <label class="prop-label">Transform</label>
+                    <div class="transform-controls">
+                        <span class="transform-label">Rotate:</span>
+                        <button class="transform-btn" onmousedown="startTransform('rot', -1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                        <input class="transform-input" type="number" value="${transform.rot}" step="1" onchange="applyGroupTransform('rot', parseFloat(this.value))">
+                        <button class="transform-btn" onmousedown="startTransform('rot', 1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                    </div>
+                    <div class="transform-controls">
+                        <span class="transform-label">Move X:</span>
+                        <button class="transform-btn" onmousedown="startTransform('tx', -1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                        <input class="transform-input" type="number" value="${transform.tx}" step="1" onchange="applyGroupTransform('tx', parseFloat(this.value))">
+                        <button class="transform-btn" onmousedown="startTransform('tx', 1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                    </div>
+                    <div class="transform-controls">
+                        <span class="transform-label">Move Y:</span>
+                        <button class="transform-btn" onmousedown="startTransform('ty', -1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                        <input class="transform-input" type="number" value="${transform.ty}" step="1" onchange="applyGroupTransform('ty', parseFloat(this.value))">
+                        <button class="transform-btn" onmousedown="startTransform('ty', 1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                    </div>
+                    <div class="transform-controls">
+                        <span class="transform-label">Scale X:</span>
+                        <button class="transform-btn" onmousedown="startTransform('sx', -0.05)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                        <input class="transform-input" type="number" value="${transform.sx}" step="0.05" onchange="applyGroupTransform('sx', parseFloat(this.value))">
+                        <button class="transform-btn" onmousedown="startTransform('sx', 0.05)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                        <button class="lock-btn ${scaleLocked ? 'active' : ''}" onclick="toggleScaleLock()" title="Lock/Unlock Scale">🔒</button>
+                    </div>
+                    <div class="transform-controls">
+                        <span class="transform-label">Scale Y:</span>
+                        <button class="transform-btn" onmousedown="startTransform('sy', -0.05)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                        <input class="transform-input" type="number" value="${transform.sy}" step="0.05" onchange="applyGroupTransform('sy', parseFloat(this.value))">
+                        <button class="transform-btn" onmousedown="startTransform('sy', 0.05)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                    </div>
+                </div>`;
+                return;
+            }
+
+            const el = selectedElements[0];
+            const tag = el.tagName.toLowerCase();
+            let html = `<div class="prop-group">
+                        <label class="prop-label-with-help">ID <span class="help-icon" data-tooltip="Unique identifier for the element">?</span></label>
+                        <input type="text" value="${el.id || ''}" onchange="selectedElements[0].id=this.value;saveHistory();"></div>`;
+
+            let fill = el.getAttribute('fill') || 'none';
+            if (fill.startsWith('url(#')) {
+                const gid = fill.match(/url\(#([^)]+)\)/)[1];
+                const grad = document.getElementById(gid);
+                if (grad) {
+                    html += `<div class="prop-group">
+                            <label class="prop-label-with-help">Gradient ${grad.tagName} (${gid}) <span class="help-icon" data-tooltip="Color gradient applied to fill">?</span></label>`;
+                    if (grad.tagName === 'linearGradient') {
+                        html += `<div class="prop-row">
+                            <div><label class="prop-label-with-help">X1 <span class="help-icon" data-tooltip="Start X coordinate (0%-100%)">?</span></label>
+                            <input type="text" value="${grad.getAttribute('x1')||'0%'}" onchange="updateGradAttr('${gid}','x1',this.value)"></div>
+                            <div><label class="prop-label-with-help">Y1 <span class="help-icon" data-tooltip="Start Y coordinate (0%-100%)">?</span></label>
+                            <input type="text" value="${grad.getAttribute('y1')||'0%'}" onchange="updateGradAttr('${gid}','y1',this.value)"></div>
+                            <div><label class="prop-label-with-help">X2 <span class="help-icon" data-tooltip="End X coordinate (0%-100%)">?</span></label>
+                            <input type="text" value="${grad.getAttribute('x2')||'100%'}" onchange="updateGradAttr('${gid}','x2',this.value)"></div>
+                            <div><label class="prop-label-with-help">Y2 <span class="help-icon" data-tooltip="End Y coordinate (0%-100%)">?</span></label>
+                            <input type="text" value="${grad.getAttribute('y2')||'0%'}" onchange="updateGradAttr('${gid}','y2',this.value)"></div>
+                        </div>`;
+                    } else if (grad.tagName === 'radialGradient') {
+                        html += `<div class="prop-row">
+                            <div><label class="prop-label-with-help">CX <span class="help-icon" data-tooltip="Center X coordinate (0%-100%)">?</span></label>
+                            <input type="text" value="${grad.getAttribute('cx')||'50%'}" onchange="updateGradAttr('${gid}','cx',this.value)"></div>
+                            <div><label class="prop-label-with-help">CY <span class="help-icon" data-tooltip="Center Y coordinate (0%-100%)">?</span></label>
+                            <input type="text" value="${grad.getAttribute('cy')||'50%'}" onchange="updateGradAttr('${gid}','cy',this.value)"></div>
+                            <div><label class="prop-label-with-help">R <span class="help-icon" data-tooltip="Radius (0%-100%)">?</span></label>
+                            <input type="text" value="${grad.getAttribute('r')||'50%'}" onchange="updateGradAttr('${gid}','r',this.value)"></div>
+                        </div>`;
+                    }
+                    let stops = '';
+                    Array.from(grad.children).forEach((stop, i) => {
+                        if (stop.tagName === 'stop') {
+                            stops += `<div class="stop-item">
+                                <div class="prop-row">
+                                    <div><label class="prop-label-with-help">Offset <span class="help-icon" data-tooltip="Position along gradient (0%-100%)">?</span></label>
+                                    <input type="text" value="${stop.getAttribute('offset')}" onchange="updateStop('${gid}',${i},'offset',this.value)"></div>
+                                    <div><label class="prop-label-with-help">Color <span class="help-icon" data-tooltip="Stop color">?</span></label>
+                                    <input type="color" value="${stop.getAttribute('stop-color')||'#000'}" onchange="updateStop('${gid}',${i},'stop-color',this.value)"></div>
+                                    <div><label class="prop-label-with-help">Opacity <span class="help-icon" data-tooltip="Stop transparency (0-1)">?</span></label>
+                                    <input type="number" step="0.01" min="0" max="1" value="${stop.getAttribute('stop-opacity')||1}" onchange="updateStop('${gid}',${i},'stop-opacity',this.value)"></div>
+                                </div>
+                                <button class="del-btn" onclick="deleteStop('${gid}',${i});renderProperties();saveHistory()">×</button>
+                            </div>`;
+                        }
+                    });
+                    html += `<label class="prop-label-with-help">Stops <span class="help-icon" data-tooltip="Color transition points in gradient">?</span></label>${stops}
+                             <button style="width:100%" onclick="addStop('${gid}');renderProperties();saveHistory()">Add Stop</button></div>`;
+                }
+            } else {
+                html += `<div class="prop-group">
+                         <label class="prop-label-with-help">Fill <span class="help-icon" data-tooltip="Interior color of the shape">?</span></label>
+                         <div class="prop-row">
+                             <div><label class="prop-label">Color</label>
+                             <input type="color" value="${fill === 'none' ? '#000000' : fill}" onchange="updateAttr('fill', this.value)"></div>
+                             <div><label class="prop-label">Type</label>
+                             <select onchange="if(this.value!=='none')createGradient(this.value)">
+                                 <option value="none" selected>Solid</option>
+                                 <option value="linear">Linear Gradient</option>
+                                 <option value="radial">Radial Gradient</option>
+                             </select></div>
+                         </div></div>`;
+            }
+
+            let stroke = el.getAttribute('stroke') || 'none';
+            html += `<div class="prop-group">
+                     <label class="prop-label-with-help">Stroke <span class="help-icon" data-tooltip="Outline/border properties">?</span></label>
+                     <div class="prop-row">
+                         <div><label class="prop-label-with-help">Color <span class="help-icon" data-tooltip="Outline color">?</span></label>
+                         <input type="color" value="${stroke === 'none' ? '#000000' : stroke}" onchange="updateAttr('stroke', this.value || 'none')"></div>
+                         <div><label class="prop-label-with-help">Width <span class="help-icon" data-tooltip="Outline thickness">?</span></label>
+                         <input type="number" min="0" step="0.5" value="${el.getAttribute('stroke-width') || 1}" onchange="updateAttr('stroke-width', this.value)"></div>
+                         <div><label class="prop-label-with-help">Opacity <span class="help-icon" data-tooltip="Outline transparency (0-1)">?</span></label>
+                         <input type="number" step="0.01" min="0" max="1" value="${el.getAttribute('stroke-opacity') || 1}" onchange="updateAttr('stroke-opacity', this.value)"></div>
+                     </div></div>`;
+
+            html += `<div class="prop-group">
+                     <label class="prop-label-with-help">Opacity <span class="help-icon" data-tooltip="Overall transparency of element (0-1)">?</span></label>
+                     <input type="number" step="0.01" min="0" max="1" value="${el.getAttribute('opacity') || 1}" onchange="updateAttr('opacity', this.value)"></div>`;
+            
+            // Transform controls for single element
+            const transform = getElementTransform(el);
+            html += `<div class="prop-group">
+                <label class="prop-label-with-help">Transform <span class="help-icon" data-tooltip="Position, rotation, and scale transformations">?</span></label>
+                <div class="transform-controls">
+                    <span class="transform-label">Rotate:</span>
+                    <button class="transform-btn" onmousedown="startTransform('rot', -1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                    <input class="transform-input" type="number" value="${transform.rot}" step="1" onchange="applyGroupTransform('rot', parseFloat(this.value))">
+                    <button class="transform-btn" onmousedown="startTransform('rot', 1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                </div>
+                <div class="transform-controls">
+                    <span class="transform-label">Move X:</span>
+                    <button class="transform-btn" onmousedown="startTransform('tx', -1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                    <input class="transform-input" type="number" value="${transform.tx}" step="1" onchange="applyGroupTransform('tx', parseFloat(this.value))">
+                    <button class="transform-btn" onmousedown="startTransform('tx', 1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                </div>
+                <div class="transform-controls">
+                    <span class="transform-label">Move Y:</span>
+                    <button class="transform-btn" onmousedown="startTransform('ty', -1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                    <input class="transform-input" type="number" value="${transform.ty}" step="1" onchange="applyGroupTransform('ty', parseFloat(this.value))">
+                    <button class="transform-btn" onmousedown="startTransform('ty', 1)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                </div>
+                <div class="transform-controls">
+                    <span class="transform-label">Scale X:</span>
+                    <button class="transform-btn" onmousedown="startTransform('sx', -0.05)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                    <input class="transform-input" type="number" value="${transform.sx}" step="0.05" onchange="applyGroupTransform('sx', parseFloat(this.value))">
+                    <button class="transform-btn" onmousedown="startTransform('sx', 0.05)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                    <button class="lock-btn ${scaleLocked ? 'active' : ''}" onclick="toggleScaleLock()" title="Lock/Unlock Scale">🔒</button>
+                </div>
+                <div class="transform-controls">
+                    <span class="transform-label">Scale Y:</span>
+                    <button class="transform-btn" onmousedown="startTransform('sy', -0.05)" onmouseup="stopTransform()" onmouseleave="stopTransform()">-</button>
+                    <input class="transform-input" type="number" value="${transform.sy}" step="0.05" onchange="applyGroupTransform('sy', parseFloat(this.value))">
+                    <button class="transform-btn" onmousedown="startTransform('sy', 0.05)" onmouseup="stopTransform()" onmouseleave="stopTransform()">+</button>
+                </div>
+            </div>`;
+
+            if (tag === 'rect') {
+                html += `<div class="prop-group">
+                         <label class="prop-label-with-help">Rectangle <span class="help-icon" data-tooltip="Position and dimensions">?</span></label>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help">X <span class="help-icon" data-tooltip="Left position">?</span></label>
+                             <input type="number" value="${el.getAttribute('x') || 0}" onchange="updateAttr('x', this.value)"></div>
+                             <div><label class="prop-label-with-help">Y <span class="help-icon" data-tooltip="Top position">?</span></label>
+                             <input type="number" value="${el.getAttribute('y') || 0}" onchange="updateAttr('y', this.value)"></div>
+                             <div><label class="prop-label-with-help">Width <span class="help-icon" data-tooltip="Horizontal size">?</span></label>
+                             <input type="number" value="${el.getAttribute('width') || 0}" onchange="updateAttr('width', this.value)"></div>
+                             <div><label class="prop-label-with-help">Height <span class="help-icon" data-tooltip="Vertical size">?</span></label>
+                             <input type="number" value="${el.getAttribute('height') || 0}" onchange="updateAttr('height', this.value)"></div>
+                         </div></div>`;
+            } else if (tag === 'ellipse' || tag === 'circle') {
+                html += `<div class="prop-group">
+                         <label class="prop-label-with-help">Ellipse <span class="help-icon" data-tooltip="Center position and radii">?</span></label>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help">Center X <span class="help-icon" data-tooltip="Horizontal center">?</span></label>
+                             <input type="number" value="${el.getAttribute('cx') || 0}" onchange="updateAttr('cx', this.value)"></div>
+                             <div><label class="prop-label-with-help">Center Y <span class="help-icon" data-tooltip="Vertical center">?</span></label>
+                             <input type="number" value="${el.getAttribute('cy') || 0}" onchange="updateAttr('cy', this.value)"></div>
+                             <div><label class="prop-label-with-help">Radius X <span class="help-icon" data-tooltip="Horizontal radius">?</span></label>
+                             <input type="number" value="${el.getAttribute('rx') || 0}" onchange="updateAttr('rx', this.value)"></div>
+                             <div><label class="prop-label-with-help">Radius Y <span class="help-icon" data-tooltip="Vertical radius">?</span></label>
+                             <input type="number" value="${el.getAttribute('ry') || 0}" onchange="updateAttr('ry', this.value)"></div>
+                         </div></div>`;
+            } else if (tag === 'line') {
+                html += `<div class="prop-group">
+                         <label class="prop-label-with-help">Line <span class="help-icon" data-tooltip="Start and end points">?</span></label>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help">X1 <span class="help-icon" data-tooltip="Start X coordinate">?</span></label>
+                             <input type="number" value="${el.getAttribute('x1') || 0}" onchange="updateAttr('x1', this.value)"></div>
+                             <div><label class="prop-label-with-help">Y1 <span class="help-icon" data-tooltip="Start Y coordinate">?</span></label>
+                             <input type="number" value="${el.getAttribute('y1') || 0}" onchange="updateAttr('y1', this.value)"></div>
+                             <div><label class="prop-label-with-help">X2 <span class="help-icon" data-tooltip="End X coordinate">?</span></label>
+                             <input type="number" value="${el.getAttribute('x2') || 0}" onchange="updateAttr('x2', this.value)"></div>
+                             <div><label class="prop-label-with-help">Y2 <span class="help-icon" data-tooltip="End Y coordinate">?</span></label>
+                             <input type="number" value="${el.getAttribute('y2') || 0}" onchange="updateAttr('y2', this.value)"></div>
+                         </div></div>`;
+            } else if (tag === 'polygon') {
+                html += `<div class="prop-group">
+                         <label class="prop-label-with-help">Points <span class="help-icon" data-tooltip="Vertex coordinates (x1,y1 x2,y2 ...)">?</span></label>
+                         <textarea onchange="updateAttr('points', this.value)">${el.getAttribute('points') || ''}</textarea></div>`;
+            } else if (tag === 'path' && el.dataset.type === 'arc') {
+                html += `<div class="prop-group">
+                         <label class="prop-label-with-help">Arc Parameters <span class="help-icon" data-tooltip="Elliptical arc settings">?</span></label>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help">Center X <span class="help-icon" data-tooltip="Horizontal center position">?</span></label>
+                             <input type="number" step="1" value="${parseFloat(el.dataset.cx || 0).toFixed(2)}" onchange="updateDataset('cx', parseFloat(this.value).toFixed(2))"></div>
+                             <div><label class="prop-label-with-help">Center Y <span class="help-icon" data-tooltip="Vertical center position">?</span></label>
+                             <input type="number" step="1" value="${parseFloat(el.dataset.cy || 0).toFixed(2)}" onchange="updateDataset('cy', parseFloat(this.value).toFixed(2))"></div>
+                         </div>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help">Radius X <span class="help-icon" data-tooltip="Horizontal radius">?</span></label>
+                             <input type="number" step="1" value="${parseFloat(el.dataset.rx || 0).toFixed(2)}" onchange="updateDataset('rx', parseFloat(this.value).toFixed(2))"></div>
+                             <div><label class="prop-label-with-help">Radius Y <span class="help-icon" data-tooltip="Vertical radius">?</span></label>
+                             <input type="number" step="1" value="${parseFloat(el.dataset.ry || 0).toFixed(2)}" onchange="updateDataset('ry', parseFloat(this.value).toFixed(2))"></div>
+                         </div>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help">Start Angle <span class="help-icon" data-tooltip="Starting angle in degrees (0° = top)">?</span></label>
+                             <input type="number" step="1" value="${parseInt(el.dataset.startAngle || 0)}" onchange="updateDataset('startAngle', this.value)"></div>
+                             <div><label class="prop-label-with-help">End Angle <span class="help-icon" data-tooltip="Ending angle in degrees (0° = top)">?</span></label>
+                             <input type="number" step="1" value="${parseInt(el.dataset.endAngle || 180)}" onchange="updateDataset('endAngle', this.value)"></div>
+                         </div>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help"><input type="checkbox" ${el.dataset.largeArc == '1' ? 'checked' : ''} onchange="updateDataset('largeArc', this.checked ? '1' : '0')"> Large Arc <span class="help-icon" data-tooltip="Draw the longer arc path">?</span></label></div>
+                             <div><label class="prop-label-with-help"><input type="checkbox" ${el.dataset.sweep == '1' ? 'checked' : ''} onchange="updateDataset('sweep', this.checked ? '1' : '0')"> Sweep <span class="help-icon" data-tooltip="Draw clockwise direction">?</span></label></div>
+                         </div></div>`;
+            } else if (tag === 'text') {
+                const weight = el.getAttribute('font-weight') || 'normal';
+                const style = el.getAttribute('font-style') || 'normal';
+                const anchor = el.getAttribute('text-anchor') || 'start';
+                const currentFont = el.getAttribute('font-family') || 'sans-serif';
+                
+                // Generate web-safe fonts dropdown options
+                const fontOptions = webSafeFonts.map(font => {
+                    // Check if current font matches this option (handle both "Courier New" and "Courier New, monospace")
+                    const selected = currentFont.replace(/\s*,\s*/g, ', ') === font.replace(/\s*,\s*/g, ', ') ? 'selected' : '';
+                    const displayFont = font.split(',')[0];
+                    return `<option value="${font}" ${selected}>${displayFont}</option>`;
+                }).join('');
+                
+                html += `<div class="prop-group">
+                         <label class="prop-label-with-help">Text Content <span class="help-icon" data-tooltip="Text string to display">?</span></label>
+                         <textarea onchange="selectedElements[0].textContent=this.value;saveHistory();renderProperties();">${el.textContent}</textarea></div>
+                         <div class="prop-group">
+                         <label class="prop-label-with-help">Typography <span class="help-icon" data-tooltip="Text appearance settings">?</span></label>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help">Size <span class="help-icon" data-tooltip="Font size in pixels">?</span></label>
+                             <input type="number" value="${el.getAttribute('font-size') || 16}" onchange="updateAttr('font-size', this.value)"></div>
+                             <div><label class="prop-label-with-help">Weight <span class="help-icon" data-tooltip="Font thickness">?</span></label>
+                             <select onchange="updateAttr('font-weight', this.value)">
+                                 <option value="normal"${weight==='normal'?' selected':''}>Normal</option>
+                                 <option value="bold"${weight==='bold'?' selected':''}>Bold</option>
+                                 <option value="100"${weight==='100'?' selected':''}>100</option>
+                                 <option value="300"${weight==='300'?' selected':''}>300</option>
+                                 <option value="500"${weight==='500'?' selected':''}>500</option>
+                                 <option value="700"${weight==='700'?' selected':''}>700</option>
+                                 <option value="900"${weight==='900'?' selected':''}>900</option>
+                             </select></div>
+                             <div><label class="prop-label-with-help">Style <span class="help-icon" data-tooltip="Font style">?</span></label>
+                             <select onchange="updateAttr('font-style', this.value)">
+                                 <option value="normal"${style==='normal'?' selected':''}>Normal</option>
+                                 <option value="italic"${style==='italic'?' selected':''}>Italic</option>
+                             </select></div>
+                         </div>
+                         <div class="prop-row">
+                             <div><label class="prop-label-with-help">Font Family <span class="help-icon" data-tooltip="Web-safe font selection">?</span></label>
+                             <select onchange="updateAttr('font-family', this.value)">
+                                 ${fontOptions}
+                                 <option value="${currentFont}" ${webSafeFonts.some(f => currentFont.includes(f.split(',')[0])) ? '' : 'selected'}>Custom: ${currentFont}</option>
+                             </select></div>
+                             <div><label class="prop-label-with-help">Alignment <span class="help-icon" data-tooltip="Text horizontal alignment">?</span></label>
+                             <select onchange="updateAttr('text-anchor', this.value)">
+                                 <option value="start"${anchor==='start'?' selected':''}>Left</option>
+                                 <option value="middle"${anchor==='middle'?' selected':''}>Center</option>
+                                 <option value="end"${anchor==='end'?' selected':''}>Right</option>
+                             </select></div>
+                         </div></div>`;
+            }
+
+            panel.innerHTML = html;
+        }
+
+        function updateAttr(attr, val) {
+            selectedElements.forEach(el => el.setAttribute(attr, val || ''));
+            saveHistory();
+            renderProperties();
+        }
+
+        function updateDataset(key, val) {
+            if (selectedElements.length !== 1) return;
+            const el = selectedElements[0];
+            if (el.dataset.type !== 'arc') return;
+            el.dataset[key] = val;
+            refreshArc(el);
+            saveHistory();
+        }
+
+        function updateGradAttr(id, attr, val) {
+            const grad = document.getElementById(id);
+            if (grad) grad.setAttribute(attr, val);
+            saveHistory();
+        }
+
+        function updateStop(gid, idx, attr, val) {
+            const grad = document.getElementById(gid);
+            if (grad && grad.children[idx]) grad.children[idx].setAttribute(attr, val);
+            saveHistory();
+        }
+
+        function deleteStop(gid, idx) {
+            const grad = document.getElementById(gid);
+            if (grad && grad.children[idx]) grad.removeChild(grad.children[idx]);
+        }
+
+        function addStop(gid) {
+            const grad = document.getElementById(gid);
+            if (grad) {
+                const stop = document.createElementNS(svgNS, 'stop');
+                stop.setAttribute('offset', '50%');
+                stop.setAttribute('stop-color', '#ffffff');
+                grad.appendChild(stop);
+            }
+        }
+
+        function createGradient(type) {
+            const defs = getDefs();
+            const grad = document.createElementNS(svgNS, type + 'Gradient');
+            const gid = 'grad-' + Date.now();
+            grad.id = gid;
+            if (type === 'linear') {
+                grad.setAttribute('x1', '0%'); grad.setAttribute('y1', '0%');
+                grad.setAttribute('x2', '100%'); grad.setAttribute('y2', '0%');
+            } else {
+                grad.setAttribute('cx', '50%'); grad.setAttribute('cy', '50%'); grad.setAttribute('r', '50%');
+            }
+            const stop1 = document.createElementNS(svgNS, 'stop');
+            stop1.setAttribute('offset', '0%');
+            stop1.setAttribute('stop-color', selectedElements[0].getAttribute('fill') || '#a78bfa');
+            const stop2 = document.createElementNS(svgNS, 'stop');
+            stop2.setAttribute('offset', '100%');
+            stop2.setAttribute('stop-color', selectedElements[0].getAttribute('fill') || '#a78bfa');
+            grad.appendChild(stop1);
+            grad.appendChild(stop2);
+            defs.appendChild(grad);
+            selectedElements.forEach(el => el.setAttribute('fill', `url(#${gid})`));
+            saveHistory();
+            renderProperties();
+        }
+
+        function saveHistory() {
+            history = history.slice(0, historyIndex + 1);
+            history.push(canvas.innerHTML);
+            historyIndex++;
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                canvas.innerHTML = history[historyIndex];
+                deselectAll();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                canvas.innerHTML = history[historyIndex];
+                deselectAll();
+            }
+        }
+
+        function copyCode() {
+            const clone = canvas.cloneNode(true);
+            clone.querySelectorAll('[selected]').forEach(el => el.removeAttribute('selected'));
+            const serializer = new XMLSerializer();
+            const source = serializer.serializeToString(clone);
+            navigator.clipboard.writeText(source);
+        }
+
+        function downloadSVG() {
+            const serializer = new XMLSerializer();
+            let source = serializer.serializeToString(canvas);
+            source = '<?xml version="1.0" standalone="no"?>\n' + source;
+            const blob = new Blob([source], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'artwork.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('svg-import').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(ev.target.result, 'image/svg+xml');
+                const imported = doc.documentElement;
+                canvas.innerHTML = '';
+                Array.from(imported.children).forEach(child => canvas.appendChild(child.cloneNode(true)));
+                fitToContent();
+                saveHistory();
+            };
+            reader.readAsText(file);
+        });
+
+        saveHistory();
+    </script>
+</body>
 </html>
-        

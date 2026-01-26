@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<!-- Copyright (c) 2025 BLGardner. All Rights Reserved. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Metadata Viewer - Prism.Tools</title>
+  <script src="../lib/exifr-4.0.0.umd.js"></script>
+  <style>
+    /* REQUIRED BASE STYLES */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0f;
+      color: #e4e4e7;
+      line-height: 1.4;
+      font-size: 14px;
+      min-height: 100vh;
+    }
+    
+    .navbar {
+      background: rgba(10, 10, 15, 0.98);
+      backdrop-filter: blur(12px);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #27272a;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-decoration: none;
+    }
+    
+    .back-link {
+      color: #a1a1aa;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .back-link:hover { color: #e4e4e7; }
+    
+    .donate-btn {
+      padding: 0.4rem 1rem;
+      background: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%);
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: transform 0.2s;
+      white-space: nowrap;
+    }
+    
+    .donate-btn:hover { transform: translateY(-1px); }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    
+    .header {
+      text-align: center;
+      padding: 1.5rem 0 1rem;
+    }
+    
+    .header h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.25rem;
+      color: #6366f1;
+    }
+    
+    .header p {
+      color: #a1a1aa;
+      font-size: 0.875rem;
+    }
+    
+    /* TOOL-SPECIFIC STYLES */
+    .upload-area {
+      background: #18181b;
+      border: 2px dashed #27272a;
+      border-radius: 8px;
+      padding: 2rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .upload-area:hover {
+      border-color: #6366f1;
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    .upload-area.dragover {
+      border-color: #6366f1;
+      background: rgba(99, 102, 241, 0.1);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-text {
+      font-size: 0.9rem;
+      color: #a1a1aa;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-subtext {
+      font-size: 0.75rem;
+      color: #71717a;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .url-input-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .url-input {
+      flex: 1;
+      padding: 0.625rem 0.875rem;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 6px;
+      color: #e4e4e7;
+      font-size: 0.85rem;
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+
+    .btn-load {
+      padding: 0.625rem 1.25rem;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #6366f1;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-load:hover {
+      background: rgba(99, 102, 241, 0.2);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .panel {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: #1f1f23;
+      padding: 0.75rem 0.875rem;
+      border-bottom: 1px solid #27272a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #6366f1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .panel-content {
+      padding: 1rem;
+      max-height: 700px;
+      overflow-y: auto;
+    }
+
+    .image-preview-wrapper {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .image-preview {
+      max-width: 100%;
+      max-height: 350px;
+      border-radius: 8px;
+      border: 1px solid #27272a;
+    }
+
+    .image-info {
+      display: grid;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .info-item {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 0.75rem;
+      padding: 0.625rem;
+      background: #0a0a0f;
+      border-radius: 6px;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #71717a;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .info-value {
+      color: #e4e4e7;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .metadata-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .metadata-section-title {
+      font-size: 0.8rem;
+      color: #6366f1;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .metadata-count {
+      background: rgba(99, 102, 241, 0.1);
+      color: #6366f1;
+      padding: 0.15rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .metadata-grid {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .metadata-item {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 0.75rem;
+      padding: 0.625rem;
+      background: rgba(99, 102, 241, 0.05);
+      border-radius: 4px;
+      border-left: 2px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .metadata-key {
+      font-weight: 600;
+      color: #a1a1aa;
+      font-size: 0.75rem;
+    }
+
+    .metadata-value {
+      color: #e4e4e7;
+      font-size: 0.75rem;
+      word-break: break-all;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #71717a;
+      font-size: 0.875rem;
+    }
+
+    .btn-export {
+      width: 100%;
+      padding: 0.625rem 1.25rem;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #6366f1;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      margin-top: 1rem;
+    }
+
+    .btn-export:hover {
+      background: rgba(99, 102, 241, 0.2);
+    }
+
+    .btn-copy {
+      padding: 0.35rem 0.65rem;
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #6366f1;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.7rem;
+      transition: all 0.2s;
+    }
+
+    .btn-copy:hover {
+      background: rgba(99, 102, 241, 0.2);
+    }
+
+    .no-metadata-notice {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .no-metadata-notice-text {
+      font-size: 0.8rem;
+      color: #fbbf24;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .metadata-item {
+        grid-template-columns: 1fr;
+      }
+
+      .info-item {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="../index.html" class="logo">PRISM.TOOLS</a>
+    <a href="https://www.paypal.com/paypalme/BLGApps" target="_blank" class="donate-btn">☕ Donate</a>
+    <a href="../index.html" class="back-link">← All Tools</a>
+  </nav>
+
+  <div class="container">
+    <div class="header">
+      <h1>🖼️ Image Metadata Viewer</h1>
+      <p>Extract and analyze EXIF, IPTC, XMP, and ICC metadata from images</p>
+    </div>
+
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📁</div>
+      <div class="upload-text">Click to upload or drag & drop an image</div>
+      <div class="upload-subtext">Supports JPG, PNG, WebP, HEIC, TIFF, and most image formats</div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="url-input-group">
+      <input type="text" class="url-input" id="urlInput" placeholder="Or enter image URL (CORS must be enabled on remote server)">
+      <button class="btn-load" id="loadUrlBtn">Load URL</button>
+    </div>
+
+    <div class="layout">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Image Preview & Info</span>
+        </div>
+        <div class="panel-content">
+          <div id="previewContent">
+            <div class="empty-state">Upload an image to view details</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Metadata</span>
+          <button class="btn-copy" id="copyAllBtn" style="display: none;" onclick="copyAllMetadata()">📋 Copy All</button>
+        </div>
+        <div class="panel-content">
+          <div id="metadataContent">
+            <div class="empty-state">No metadata available</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentMetadata = null;
+    let currentImageBlob = null;
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const urlInput = document.getElementById('urlInput');
+    const loadUrlBtn = document.getElementById('loadUrlBtn');
+    const previewContent = document.getElementById('previewContent');
+    const metadataContent = document.getElementById('metadataContent');
+    const copyAllBtn = document.getElementById('copyAllBtn');
+
+    // Drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        processImage(file);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) processImage(file);
+    });
+
+    loadUrlBtn.addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      if (!url) return;
+      
+      try {
+        const response = await fetch(url, { mode: 'cors' });
+        const blob = await response.blob();
+        processImage(blob, url.split('/').pop() || 'remote-image');
+      } catch (error) {
+        metadataContent.innerHTML = '<div class="empty-state">❌ Failed to load image. CORS may be blocking the request.</div>';
+      }
+    });
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function formatValue(value) {
+      if (value === null || value === undefined) return 'N/A';
+      if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+      if (typeof value === 'object') return JSON.stringify(value, null, 2);
+      if (typeof value === 'number' && value < 1 && value > 0) return value.toFixed(6);
+      return String(value);
+    }
+
+    function renderPreview(imageBlob, fileName, dimensions, meta) {
+      const imgUrl = URL.createObjectURL(imageBlob);
+      const hasMetadata = meta && Object.keys(meta).filter(k => !k.startsWith('_')).length > 0;
+
+      let html = `
+        <div class="image-preview-wrapper">
+          <img src="${imgUrl}" class="image-preview" alt="Preview">
+        </div>
+      `;
+
+      if (!hasMetadata) {
+        html += `
+          <div class="no-metadata-notice">
+            <div class="no-metadata-notice-text">
+              ⚠️ This image contains no embedded metadata. This is common for:
+              <br>• Screenshots
+              <br>• Web-optimized images
+              <br>• Privacy-scrubbed photos
+              <br>• Some AI-generated images
+            </div>
+          </div>
+        `;
+      }
+
+      html += `<div class="image-info">`;
+      
+      html += `
+        <div class="info-item">
+          <div class="info-label">File Name</div>
+          <div class="info-value">${fileName}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">File Type</div>
+          <div class="info-value">${imageBlob.type || 'Unknown'}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">File Size</div>
+          <div class="info-value">${formatBytes(imageBlob.size)}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Dimensions</div>
+          <div class="info-value">${dimensions.width} × ${dimensions.height} px</div>
+        </div>
+      `;
+
+      if (meta.Make || meta.Model) {
+        html += `
+          <div class="info-item">
+            <div class="info-label">Camera</div>
+            <div class="info-value">${meta.Make || ''} ${meta.Model || ''}</div>
+          </div>
+        `;
+      }
+
+      if (meta.DateTimeOriginal || meta.CreateDate) {
+        html += `
+          <div class="info-item">
+            <div class="info-label">Date Taken</div>
+            <div class="info-value">${meta.DateTimeOriginal || meta.CreateDate}</div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+
+      html += `<button class="btn-export" onclick="exportMetadata()">💾 Export Metadata (JSON)</button>`;
+
+      previewContent.innerHTML = html;
+    }
+
+    function renderMetadata(meta) {
+      if (!meta || Object.keys(meta).filter(k => !k.startsWith('_')).length === 0) {
+        metadataContent.innerHTML = '<div class="empty-state">No metadata found in this image</div>';
+        copyAllBtn.style.display = 'none';
+        return;
+      }
+
+      copyAllBtn.style.display = 'block';
+
+      // Organize metadata into sections
+      const sections = {
+        'Camera Information': ['Make', 'Model', 'LensModel', 'LensMake', 'SerialNumber'],
+        'Image Properties': ['ImageWidth', 'ImageHeight', 'BitsPerSample', 'ColorSpace', 'Compression', 'Orientation', 'XResolution', 'YResolution', 'ResolutionUnit'],
+        'Capture Settings': ['ExposureTime', 'FNumber', 'ISO', 'FocalLength', 'Flash', 'WhiteBalance', 'ExposureMode', 'MeteringMode', 'ExposureProgram', 'ExposureBiasValue', 'MaxApertureValue'],
+        'Software & Processing': ['Software', 'CreatorTool', 'ProcessingSoftware', 'HostComputer', 'Converter'],
+        'Date & Time': ['DateTimeOriginal', 'CreateDate', 'ModifyDate', 'DateTime', 'DateTimeDigitized'],
+        'Location (GPS)': ['GPSLatitude', 'GPSLongitude', 'GPSAltitude', 'GPSLatitudeRef', 'GPSLongitudeRef', 'GPSAltitudeRef'],
+        'Attribution & Rights': ['Artist', 'Copyright', 'Credit', 'Source', 'CopyrightNotice', 'UsageTerms'],
+        'Description': ['ImageDescription', 'UserComment', 'Comment', 'Description', 'Caption'],
+        'Content Credentials': ['ContentCredentials', 'C2PA', 'DigitalSourceType', 'DigitalCreationDateTime'],
+        'Color Profile (ICC)': ['ProfileDescription', 'ProfileCopyright', 'ProfileClass', 'ColorSpaceData', 'ProfileConnectionSpace'],
+        'IPTC': ['Keywords', 'Category', 'SupplementalCategories', 'Headline', 'By-line', 'City', 'Country']
+      };
+
+      let html = '';
+
+      for (const [sectionTitle, keys] of Object.entries(sections)) {
+        const sectionData = {};
+        keys.forEach(key => {
+          if (meta[key] !== undefined && meta[key] !== null && meta[key] !== '') {
+            sectionData[key] = meta[key];
+          }
+        });
+
+        if (Object.keys(sectionData).length > 0) {
+          html += `<div class="metadata-section">`;
+          html += `<div class="metadata-section-title">${sectionTitle} <span class="metadata-count">${Object.keys(sectionData).length}</span></div>`;
+          html += `<div class="metadata-grid">`;
+          
+          for (const [key, value] of Object.entries(sectionData)) {
+            html += `
+              <div class="metadata-item">
+                <div class="metadata-key">${key}</div>
+                <div class="metadata-value">${formatValue(value)}</div>
+              </div>
+            `;
+          }
+          
+          html += `</div></div>`;
+        }
+      }
+
+      // Add "Other" section for remaining fields
+      const allUsedKeys = Object.values(sections).flat();
+      const otherData = {};
+      for (const [key, value] of Object.entries(meta)) {
+        if (!allUsedKeys.includes(key) && !key.startsWith('_') && value !== undefined && value !== null && value !== '') {
+          otherData[key] = value;
+        }
+      }
+
+      if (Object.keys(otherData).length > 0) {
+        html += `<div class="metadata-section">`;
+        html += `<div class="metadata-section-title">Other Metadata <span class="metadata-count">${Object.keys(otherData).length}</span></div>`;
+        html += `<div class="metadata-grid">`;
+        
+        for (const [key, value] of Object.entries(otherData)) {
+          html += `
+            <div class="metadata-item">
+              <div class="metadata-key">${key}</div>
+              <div class="metadata-value">${formatValue(value)}</div>
+            </div>
+          `;
+        }
+        
+        html += `</div></div>`;
+      }
+
+      metadataContent.innerHTML = html || '<div class="empty-state">No metadata found</div>';
+    }
+
+    async function processImage(imageFile, fileName) {
+      try {
+        currentImageBlob = imageFile;
+        
+        // Extract metadata
+        const meta = await exifr.parse(imageFile, {
+          tiff: true,
+          exif: true,
+          gps: true,
+          iptc: true,
+          ifd0: true,
+          ifd1: true,
+          xmp: true,
+          icc: true,
+          jfif: true,
+          ihdr: true,
+          mpeg: true,
+          mergeOutput: true,
+          sanitize: false,
+          reviveValues: true,
+          translateKeys: false,
+          translateValues: false,
+          pick: undefined,
+          skip: undefined
+        }).catch(e => {
+          console.warn('Exifr parse warning:', e);
+          return {};
+        });
+
+        // Get image dimensions
+        const img = new Image();
+        const imgLoadPromise = new Promise((resolve) => {
+          img.onload = () => resolve({ width: img.width, height: img.height });
+          img.onerror = () => resolve({ width: 0, height: 0 });
+        });
+        img.src = URL.createObjectURL(imageFile);
+        const dimensions = await imgLoadPromise;
+
+        // Add dimensions to metadata if not present
+        if (!meta.ImageWidth && dimensions.width) {
+          meta.ImageWidth = dimensions.width;
+          meta.ImageHeight = dimensions.height;
+        }
+
+        currentMetadata = meta || {};
+
+        renderPreview(imageFile, fileName || imageFile.name, dimensions, meta);
+        renderMetadata(meta);
+        
+        trackUsage();
+      } catch (error) {
+        console.error('Error processing image:', error);
+        previewContent.innerHTML = '<div class="empty-state">❌ Error processing image</div>';
+        metadataContent.innerHTML = `<div class="empty-state">Error: ${error.message}</div>`;
+      }
+    }
+
+    function copyAllMetadata() {
+      if (!currentMetadata) return;
+      
+      const cleanMeta = {};
+      for (const [key, value] of Object.entries(currentMetadata)) {
+        if (!key.startsWith('_')) {
+          cleanMeta[key] = value;
+        }
+      }
+      
+      navigator.clipboard.writeText(JSON.stringify(cleanMeta, null, 2)).then(() => {
+        const btn = document.getElementById('copyAllBtn');
+        const original = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      });
+    }
+
+    function exportMetadata() {
+      if (!currentMetadata) return;
+      
+      const cleanMeta = {};
+      for (const [key, value] of Object.entries(currentMetadata)) {
+        if (!key.startsWith('_')) {
+          cleanMeta[key] = value;
+        }
+      }
+      
+      const exportData = {
+        timestamp: new Date().toISOString(),
+        metadata: cleanMeta
+      };
+      
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `image-metadata-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function trackUsage() {
+      let count = parseInt(localStorage.getItem('prism-usage-count') || '0');
+      count++;
+      localStorage.setItem('prism-usage-count', count);
+    }
+  </script>
+</body>
+</html>

@@ -330,31 +330,53 @@
     </div>
   </div>
 
+  <script src="../lib/qrcode-1.0.0.min.js"></script>
   <script>
-    // Simple QR Code generator (no external library needed)
+    let currentQRCode = null;
+    let currentCanvas = null;
+
     function generateQR() {
       const text = document.getElementById('qr-text').value;
       const size = parseInt(document.getElementById('qr-size').value);
       const fg = document.getElementById('qr-fg').value;
       const bg = document.getElementById('qr-bg').value;
+      const errorLevel = document.getElementById('qr-error').value;
 
       if (!text) {
         alert('Please enter text or URL');
         return;
       }
 
-      // Use a free QR code API
-      const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&color=${fg.replace('#', '')}&bgcolor=${bg.replace('#', '')}`;
-
       const display = document.getElementById('qr-display');
+      
+      // Clear previous QR code
+      if (currentQRCode) {
+        currentQRCode.clear();
+      }
+      
+      // Create container for QR code
       display.innerHTML = `
-        <img src="${apiUrl}" alt="QR Code" id="qr-image" style="max-width: 100%; border-radius: 8px;">
+        <div id="qr-container"></div>
         <div class="download-buttons">
           <button class="btn-download" onclick="downloadQR('png')">💾 Download PNG</button>
-          <button class="btn-download" onclick="downloadQR('svg')">💾 Download SVG</button>
         </div>
       `;
+      
+      const container = document.getElementById('qr-container');
+      
+      // Create new QR code with local library
+      currentQRCode = new QRCode(container, {
+        text: text,
+        width: size,
+        height: size,
+        colorDark: fg,
+        colorLight: bg,
+        correctLevel: QRCode.CorrectLevel[errorLevel]
+      });
 
+      // Store the canvas for later download
+      currentCanvas = container.querySelector('canvas');
+      
       trackUsage();
     }
 
@@ -363,18 +385,19 @@
       const size = parseInt(document.getElementById('qr-size').value);
       const fg = document.getElementById('qr-fg').value;
       const bg = document.getElementById('qr-bg').value;
-
-      let url;
-      if (format === 'svg') {
-        url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&format=svg&data=${encodeURIComponent(text)}&color=${fg.replace('#', '')}&bgcolor=${bg.replace('#', '')}`;
-      } else {
-        url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&color=${fg.replace('#', '')}&bgcolor=${bg.replace('#', '')}`;
+      
+      if (!currentCanvas) {
+        alert('Please generate a QR code first');
+        return;
       }
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `qrcode.${format}`;
-      a.click();
+      
+      if (format === 'png') {
+        // Download as PNG
+        const link = document.createElement('a');
+        link.download = 'qrcode.png';
+        link.href = currentCanvas.toDataURL('image/png');
+        link.click();
+      } 
     }
 
     function setPreset(type) {
@@ -382,7 +405,7 @@
       
       switch(type) {
         case 'url':
-          input.value = 'https://example.com';
+          input.value = 'https://blgardner.github.io/prism.tools';
           break;
         case 'email':
           input.value = 'mailto:contact@example.com?subject=Hello&body=Your message here';
@@ -394,6 +417,7 @@
           input.value = 'WIFI:T:WPA;S:NetworkName;P:Password123;;';
           break;
       }
+	  generateQR();
     }
 
     // Sync color inputs
@@ -424,7 +448,9 @@
     }
 
     // Auto-generate on load
-    generateQR();
+    window.addEventListener('DOMContentLoaded', () => {
+      generateQR();
+    });
   </script>
 </body>
 </html>
