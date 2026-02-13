@@ -80,15 +80,15 @@ A collection of privacy-focused, client-side developer tools. No tracking, no ad
 ## 🚀 Quick Start
 
 ### Option 1: Use Online
-Visit [https://blgardner.github.io/prism.tools/](https://blgardner.github.io/prism.tools/)
+Use the developer repository: [https://github.com/DmitryTokyo/prism.tools.docker](https://github.com/DmitryTokyo/prism.tools.docker)
 
-### Option 2: Run Locally
+### Option 2: Run Locally (No Docker)
 ```bash
 # Clone the repository
-git clone https://github.com/blgardner/prism.tools.git
+git clone https://github.com/DmitryTokyo/prism.tools.docker.git
 
 # Navigate to directory
-cd prism.tools
+cd prism.tools.docker
 
 # Open in browser (no build step required!)
 open index.html
@@ -96,10 +96,44 @@ open index.html
 python -m http.server 8000
 ```
 
+### Option 3: Run with Docker
+```bash
+# Clone the repository
+git clone https://github.com/DmitryTokyo/prism.tools.docker.git
+
+# Navigate to directory
+cd prism.tools.docker
+
+# Start with interactive port prompt
+./run-docker.sh
+```
+
+The script:
+- stops currently running containers from this compose project
+- asks which host port to use
+- validates the port and checks whether it is already occupied
+- starts the app at `http://localhost:<your-port>`
+
+Alternative manual commands:
+```bash
+# Start on a specific port (example: 8099)
+HOST_PORT=8099 docker compose up --build -d
+
+# View status and logs
+docker compose ps
+docker compose logs -f
+
+# Stop
+docker compose down
+```
+
 ## 📁 Project Structure
 ```
 prism.tools/
 ├── index.html              # Main landing page
+├── Dockerfile              # Container image for static hosting (nginx)
+├── docker-compose.yml      # Local Docker orchestration
+├── run-docker.sh           # Interactive Docker start script
 ├── tools/                  # Individual tool pages
 │   ├── json-formatter.html
 │   ├── base64.html
@@ -129,22 +163,14 @@ Contributions are welcome! Here's how you can help:
 
 If you find Prism.Tools useful, consider supporting development:
 
-- ☕ [Donate via PayPal](https://www.paypal.com/paypalme/BLGApps)
-- ⭐ Star this repository
-- 🐦 Share on social media
-- 🐛 Report bugs and suggest features
-
-**Your donations fund:** Development time and new features
+- This repository is a fork of [BLGardner/prism.tools](https://github.com/BLGardner/prism.tools).
+- ⭐ [Star the repository](https://github.com/DmitryTokyo/prism.tools.docker)
+- 🐛 [Report bugs and suggest features](https://github.com/DmitryTokyo/prism.tools.docker/issues)
+- 🍴 [Fork and contribute](https://github.com/DmitryTokyo/prism.tools.docker/fork)
 
 ## 📜 License
 
 License - see [LICENSE](LICENSE.md) file for details
-
-## 🔗 Links
-
-- **Live:** [https://blgardner.github.io/prism.tools/](https://blgardner.github.io/prism.tools/)
-- **GitHub:** [https://github.com/blgardner/prism.tools](https://github.com/blgardner/prism.tools)
-- **Donate:** [https://www.paypal.com/paypalme/BLGApps](https://www.paypal.com/paypalme/BLGApps)
 
 ## 🙏 Acknowledgments
 
