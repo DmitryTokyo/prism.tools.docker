@@ -112,7 +112,7 @@ The script:
 - detects an already running `prism-tools` container and its current host port
 - if found, asks whether to keep the current port (`Yes` by default)
 - if no running container is found (or you choose `No`), asks which host port to use
-- uses `880` as the default port
+- uses `8080` as the default port
 - validates the port and checks whether it is already occupied
 - starts the app at `http://localhost:<your-port>`
 
