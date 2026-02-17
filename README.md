@@ -1,4 +1,4 @@
-# 💠 Prism.Tools
+# 💠 Prism.Tools (Docker version)
 
 **Developer Utilities, Refined**
 
