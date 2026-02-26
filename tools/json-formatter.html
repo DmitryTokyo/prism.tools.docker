@@ -232,20 +232,32 @@
 
   <div class="container">
     <div class="tool-header">
-      <h1>📋 JSON Formatter</h1>
-      <p>Format, validate, and beautify your JSON data</p>
+      <h1>📋 JSON / Python Formatter</h1>
+      <p>Format, validate, and beautify JSON or Python dict/list data</p>
     </div>
 
     <div class="tool-interface">
       <div class="input-group">
-        <label for="json-input">Input JSON</label>
-        <textarea id="json-input" placeholder='Paste your JSON here... e.g. {"name":"John","age":30,"city":"New York"}'></textarea>
+        <label for="json-input">Input Data</label>
+        <textarea id="json-input" placeholder="Paste JSON or Python dict/list here... e.g. {&quot;name&quot;:&quot;John&quot;} or {'name': 'John', 'active': True}"></textarea>
+      </div>
+
+      <div class="input-group">
+        <label for="input-format">Input Format</label>
+        <select id="input-format" style="width: 100%; padding: 0.75rem 1rem; background: rgba(15, 15, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #ffffff; font-family: inherit;">
+          <option value="auto">Auto-detect (JSON or Python dict/list)</option>
+          <option value="json">JSON (strict)</option>
+          <option value="python">Python dict/list literal</option>
+        </select>
+        <div style="margin-top: 0.5rem; color: #9ca3af; font-size: 0.85rem;">
+          Output is always valid JSON (Python dict/list input is converted first).
+        </div>
       </div>
 
       <div class="button-group">
         <button onclick="formatJSON()">✨ Format & Validate</button>
         <button class="secondary" onclick="minifyJSON()">📦 Minify</button>
-        <button class="secondary" onclick="copyOutput()">📋 Copy Output</button>
+        <button class="secondary" onclick="copyOutput(this)">📋 Copy Output</button>
         <button class="secondary" onclick="clearAll()">🗑️ Clear</button>
       </div>
 
@@ -269,7 +281,7 @@
       <div class="keyboard-shortcuts">
         <h3>⌨️ Keyboard Shortcuts</h3>
         <div class="shortcut">
-          <span>Format JSON</span>
+          <span>Format Data</span>
           <span class="key">Ctrl + Enter</span>
         </div>
         <div class="shortcut">
@@ -301,91 +313,292 @@
       return count;
     }
 
-    function formatJSON() {
-      const input = document.getElementById('json-input').value;
+    function showError(message) {
       const output = document.getElementById('output');
       const stats = document.getElementById('stats');
-      
+
+      output.innerHTML = `<span style="color: #FF6B6B;">✗ Invalid input</span><br><br>${escapeHtml(message)}`;
+      output.style.display = 'block';
+      output.className = 'output error';
+
+      stats.style.display = 'flex';
+      document.getElementById('status').textContent = '✗ Invalid';
+      document.getElementById('status').style.color = '#FF6B6B';
+      document.getElementById('size').textContent = '-';
+      document.getElementById('keys').textContent = '-';
+    }
+
+    function showSuccess(resultText, parsed, sourceLabel) {
+      const output = document.getElementById('output');
+      const stats = document.getElementById('stats');
+
+      currentOutput = resultText;
+      output.innerHTML = `<pre style="margin: 0; overflow-x: auto;">${escapeHtml(resultText)}</pre>`;
+      output.style.display = 'block';
+      output.className = 'output success';
+
+      stats.style.display = 'flex';
+      document.getElementById('status').textContent = `✓ ${sourceLabel}`;
+      document.getElementById('status').style.color = '#6BCF7F';
+      document.getElementById('size').textContent = formatBytes(resultText.length);
+      document.getElementById('keys').textContent = countKeys(parsed);
+
+      trackUsage();
+    }
+
+    function removeTrailingCommas(input) {
+      let result = '';
+      let inString = false;
+      let quoteChar = '';
+      let escaped = false;
+
+      for (let i = 0; i < input.length; i++) {
+        const char = input[i];
+
+        if (inString) {
+          result += char;
+          if (escaped) {
+            escaped = false;
+          } else if (char === '\\') {
+            escaped = true;
+          } else if (char === quoteChar) {
+            inString = false;
+            quoteChar = '';
+          }
+          continue;
+        }
+
+        if (char === '"' || char === '\'') {
+          inString = true;
+          quoteChar = char;
+          result += char;
+          continue;
+        }
+
+        if (char === ',') {
+          let j = i + 1;
+          while (j < input.length && /\s/.test(input[j])) j++;
+          if (input[j] === '}' || input[j] === ']') {
+            continue;
+          }
+        }
+
+        result += char;
+      }
+
+      return result;
+    }
+
+    function convertPythonSingleQuotedStrings(input) {
+      let result = '';
+      let inDouble = false;
+      let inSingle = false;
+      let escaped = false;
+
+      for (let i = 0; i < input.length; i++) {
+        const char = input[i];
+
+        if (inSingle) {
+          if (escaped) {
+            // Preserve common escapes and ensure JSON-safe escaping.
+            if (char === '"' || char === '\\') {
+              result += '\\' + char;
+            } else if (char === '\'') {
+              result += '\'';
+            } else {
+              result += '\\' + char;
+            }
+            escaped = false;
+            continue;
+          }
+
+          if (char === '\\') {
+            escaped = true;
+            continue;
+          }
+
+          if (char === '\'') {
+            inSingle = false;
+            result += '"';
+            continue;
+          }
+
+          if (char === '"') {
+            result += '\\"';
+            continue;
+          }
+
+          result += char;
+          continue;
+        }
+
+        if (inDouble) {
+          result += char;
+          if (escaped) {
+            escaped = false;
+          } else if (char === '\\') {
+            escaped = true;
+          } else if (char === '"') {
+            inDouble = false;
+          }
+          continue;
+        }
+
+        if (char === '\'') {
+          inSingle = true;
+          result += '"';
+          continue;
+        }
+
+        if (char === '"') {
+          inDouble = true;
+          result += char;
+          continue;
+        }
+
+        result += char;
+      }
+
+      if (inSingle) {
+        throw new Error('Unterminated single-quoted Python string');
+      }
+
+      return result;
+    }
+
+    function replacePythonKeywords(input) {
+      let result = '';
+      let i = 0;
+      let inString = false;
+      let quoteChar = '';
+      let escaped = false;
+
+      while (i < input.length) {
+        const char = input[i];
+
+        if (inString) {
+          result += char;
+          if (escaped) {
+            escaped = false;
+          } else if (char === '\\') {
+            escaped = true;
+          } else if (char === quoteChar) {
+            inString = false;
+            quoteChar = '';
+          }
+          i++;
+          continue;
+        }
+
+        if (char === '"' || char === '\'') {
+          inString = true;
+          quoteChar = char;
+          result += char;
+          i++;
+          continue;
+        }
+
+        const rest = input.slice(i);
+        const tokenMatch = rest.match(/^(True|False|None)\b/);
+        if (tokenMatch) {
+          const token = tokenMatch[1];
+          result += token === 'True' ? 'true' : token === 'False' ? 'false' : 'null';
+          i += token.length;
+          continue;
+        }
+
+        result += char;
+        i++;
+      }
+
+      return result;
+    }
+
+    function pythonLiteralToJsonText(input) {
+      let transformed = input.trim();
+      transformed = removeTrailingCommas(transformed);
+      transformed = replacePythonKeywords(transformed);
+      transformed = convertPythonSingleQuotedStrings(transformed);
+      return transformed;
+    }
+
+    function parseStructuredInput(input, mode) {
+      const trimmed = input.trim();
+
+      if (!trimmed) {
+        throw new Error('Please enter some data to format');
+      }
+
+      if (mode === 'json') {
+        return { parsed: JSON.parse(trimmed), sourceLabel: 'JSON' };
+      }
+
+      if (mode === 'python') {
+        const jsonText = pythonLiteralToJsonText(trimmed);
+        return { parsed: JSON.parse(jsonText), sourceLabel: 'Python→JSON' };
+      }
+
+      try {
+        return { parsed: JSON.parse(trimmed), sourceLabel: 'JSON' };
+      } catch (_) {
+        const jsonText = pythonLiteralToJsonText(trimmed);
+        return { parsed: JSON.parse(jsonText), sourceLabel: 'Python→JSON' };
+      }
+    }
+
+    function formatJSON() {
+      const input = document.getElementById('json-input').value;
+      const mode = document.getElementById('input-format').value;
+      const output = document.getElementById('output');
+      const stats = document.getElementById('stats');
+
       if (!input.trim()) {
-        output.innerHTML = '<span style="color: #FF6B6B;">⚠️ Please enter some JSON to format</span>';
+        output.innerHTML = '<span style="color: #FF6B6B;">⚠️ Please enter some data to format</span>';
         output.style.display = 'block';
         output.className = 'output error';
         stats.style.display = 'none';
         return;
       }
-      
+
       try {
-        const parsed = JSON.parse(input);
+        const { parsed, sourceLabel } = parseStructuredInput(input, mode);
         const formatted = JSON.stringify(parsed, null, 2);
-        currentOutput = formatted;
-        
-        output.innerHTML = `<pre style="margin: 0; overflow-x: auto;">${escapeHtml(formatted)}</pre>`;
-        output.style.display = 'block';
-        output.className = 'output success';
-        
-        // Show stats
-        stats.style.display = 'flex';
-        document.getElementById('status').textContent = '✓ Valid';
-        document.getElementById('status').style.color = '#6BCF7F';
-        document.getElementById('size').textContent = formatBytes(formatted.length);
-        document.getElementById('keys').textContent = countKeys(parsed);
-        
-        trackUsage();
+        showSuccess(formatted, parsed, sourceLabel);
       } catch (e) {
-        output.innerHTML = `<span style="color: #FF6B6B;">✗ Invalid JSON</span><br><br>${escapeHtml(e.message)}`;
-        output.style.display = 'block';
-        output.className = 'output error';
-        
-        stats.style.display = 'flex';
-        document.getElementById('status').textContent = '✗ Invalid';
-        document.getElementById('status').style.color = '#FF6B6B';
-        document.getElementById('size').textContent = '-';
-        document.getElementById('keys').textContent = '-';
+        showError(e.message);
       }
     }
 
     function minifyJSON() {
       const input = document.getElementById('json-input').value;
+      const mode = document.getElementById('input-format').value;
       const output = document.getElementById('output');
       
       if (!input.trim()) {
-        output.innerHTML = '<span style="color: #FF6B6B;">⚠️ Please enter some JSON to minify</span>';
+        output.innerHTML = '<span style="color: #FF6B6B;">⚠️ Please enter some data to minify</span>';
         output.style.display = 'block';
         output.className = 'output error';
         return;
       }
       
       try {
-        const parsed = JSON.parse(input);
+        const { parsed, sourceLabel } = parseStructuredInput(input, mode);
         const minified = JSON.stringify(parsed);
-        currentOutput = minified;
-        
-        output.innerHTML = `<pre style="margin: 0; overflow-x: auto;">${escapeHtml(minified)}</pre>`;
-        output.style.display = 'block';
-        output.className = 'output success';
-        
-        document.getElementById('stats').style.display = 'flex';
-        document.getElementById('status').textContent = '✓ Valid';
-        document.getElementById('status').style.color = '#6BCF7F';
-        document.getElementById('size').textContent = formatBytes(minified.length);
-        document.getElementById('keys').textContent = countKeys(parsed);
-        
-        trackUsage();
+        showSuccess(minified, parsed, sourceLabel);
       } catch (e) {
-        output.innerHTML = `<span style="color: #FF6B6B;">✗ Invalid JSON</span><br><br>${escapeHtml(e.message)}`;
-        output.style.display = 'block';
-        output.className = 'output error';
+        showError(e.message);
       }
     }
 
-    function copyOutput() {
+    function copyOutput(buttonEl) {
       if (!currentOutput) {
-        alert('Nothing to copy! Format some JSON first.');
+        alert('Nothing to copy! Format some data first.');
         return;
       }
       
       navigator.clipboard.writeText(currentOutput).then(() => {
-        const btn = event.target;
+        const btn = buttonEl || document.activeElement;
+        if (!btn || btn.tagName !== 'BUTTON') return;
         const originalText = btn.textContent;
         btn.textContent = '✓ Copied!';
         setTimeout(() => {

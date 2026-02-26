@@ -23,7 +23,7 @@ A collection of privacy-focused, client-side developer tools. No tracking, no ad
 
 ### 📋 Formatters & Parsers
 - Code Formatter - Format & beautify code
-- JSON Formatter - Format & validate JSON
+- JSON Formatter - Format & validate JSON or Python dict/list input (output as JSON)
 - SQL Formatter - Format SQL queries
 - YAML ↔ JSON Converter - Convert between YAML and JSON
 - CURL to Fetch - Convert CURL commands to JavaScript
